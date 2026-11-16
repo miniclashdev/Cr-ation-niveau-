@@ -1,0 +1,1996 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Devil Level Studio</title>
+  <script>(function(){var w=console.warn;console.warn=function(){var m=arguments[0];if(typeof m==="string"&&m.indexOf("cdn.tailwindcss.com should not be used in production")>-1)return;return w.apply(console,arguments);};})();</script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+    * { user-select: none; -webkit-user-select: none; box-sizing: border-box; }
+    body { font-family: 'Outfit', sans-serif; touch-action: manipulation; }
+    canvas { image-rendering: pixelated; touch-action: none; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  </style>
+</head>
+<body class="h-full flex flex-col overflow-hidden bg-slate-950 text-slate-100 select-none">
+
+  <!-- HEADER NAVBAR -->
+  <header class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between shrink-0 shadow-lg z-30">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 to-amber-500 flex items-center justify-center font-black text-2xl shadow-lg shadow-red-600/30">
+        😈
+      </div>
+      <div>
+        <h1 class="font-extrabold text-lg tracking-wide bg-gradient-to-r from-red-400 via-amber-300 to-red-500 bg-clip-text text-transparent leading-none">
+          DEVIL LEVEL STUDIO
+        </h1>
+        <p class="text-[11px] text-slate-400 font-medium mt-0.5">Éditeur Sandbox 2D & Pièges Diaboliques</p>
+      </div>
+    </div>
+
+    <!-- Mode Selector Tabs -->
+    <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 gap-1">
+      <button id="tabEdit" onclick="switchMode('edit')" class="px-4 py-1.5 rounded-lg font-semibold text-xs transition flex items-center gap-2 bg-gradient-to-r from-red-600 to-amber-600 text-white shadow-md">
+        <i class="fa-solid fa-pen-ruler"></i> Éditeur
+      </button>
+      <button id="tabPlay" onclick="switchMode('play')" class="px-4 py-1.5 rounded-lg font-semibold text-xs transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900">
+        <i class="fa-solid fa-gamepad"></i> Jouer
+      </button>
+      <button id="tabMine" onclick="switchMode('mine')" class="px-4 py-1.5 rounded-lg font-semibold text-xs transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900">
+        <i class="fa-solid fa-folder-open"></i> Mes niveaux
+      </button>
+      <button id="tabCommunity" onclick="switchMode('community')" class="px-4 py-1.5 rounded-lg font-semibold text-xs transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900">
+        <i class="fa-solid fa-earth-americas"></i> Communauté
+      </button>
+    </div>
+
+    <!-- Actions Globales -->
+    <div class="flex items-center gap-2">
+      <button onclick="pubPack = null; openPublishModal()" class="px-3.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-lg shadow-md flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-paper-plane"></i> Publier
+      </button>
+    </div>
+  </header>
+
+  <!-- WORKSPACE -->
+  <main class="flex-1 relative overflow-hidden flex bg-slate-950">
+
+    <!-- VIEW: WORKSPACE (Canvas + Editor Controls) -->
+    <div id="viewWorkspace" class="flex-1 flex flex-col relative bg-slate-950 items-center justify-center p-2">
+
+      <!-- HUD Overlay -->
+      <div id="gameInfoOverlay" class="absolute top-4 left-4 right-4 flex justify-between items-center z-10 pointer-events-none hidden">
+        <div class="bg-slate-900/90 backdrop-blur border border-slate-800 px-4 py-2 rounded-xl flex items-center gap-4 shadow-xl pointer-events-auto">
+          <span class="text-xs font-bold uppercase tracking-wider text-amber-400" id="hudLevelTitle">Partie Personnalisée</span>
+          <div class="h-4 w-px bg-slate-700"></div>
+          <span class="text-xs font-semibold text-slate-300">Morts: <span id="hudDeathCounter" class="text-red-400 font-bold">0</span></span>
+        </div>
+        <div class="flex items-center gap-2 pointer-events-auto">
+          <button onclick="restartLevel()" class="px-3 py-2 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-200 text-xs font-bold transition shadow-lg flex items-center gap-1.5">
+            <i class="fa-solid fa-rotate-right"></i> Recommencer (R)
+          </button>
+        </div>
+      </div>
+
+      <!-- Editor Sidebar Palette -->
+      <div id="editorSidebar" class="absolute top-4 left-4 bottom-4 w-80 bg-slate-900/95 backdrop-blur border border-slate-800 rounded-2xl p-3.5 z-20 flex flex-col gap-3 shadow-2xl overflow-y-auto">
+        <div>
+          <h2 class="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-1.5">Outils de Création</h2>
+          <div class="grid grid-cols-4 gap-1">
+            <button id="toolDraw" onclick="setTool('draw')" class="p-2 rounded-xl border bg-amber-500/20 border-amber-500 text-amber-300 font-bold text-[10px] flex flex-col items-center gap-1 transition">
+              <i class="fa-solid fa-paintbrush"></i> Dessiner
+            </button>
+            <button id="toolInspect" onclick="setTool('inspect')" class="p-2 rounded-xl border bg-slate-800 border-slate-700 text-slate-400 font-bold text-[10px] flex flex-col items-center gap-1 transition hover:bg-slate-700">
+              <i class="fa-solid fa-sliders"></i> Inspecter
+            </button>
+            <button id="toolLink" onclick="setTool('link')" class="p-2 rounded-xl border bg-slate-800 border-slate-700 text-slate-400 font-bold text-[10px] flex flex-col items-center gap-1 transition hover:bg-slate-700">
+              <i class="fa-solid fa-diagram-project"></i> Relier
+            </button>
+            <button id="toolErase" onclick="setTool('erase')" class="p-2 rounded-xl border bg-slate-800 border-slate-700 text-slate-400 font-bold text-[10px] flex flex-col items-center gap-1 transition hover:bg-slate-700">
+              <i class="fa-solid fa-eraser"></i> Gomme
+            </button>
+          </div>
+          <p id="toolHintText" class="text-[10px] text-amber-400 mt-1 font-medium italic">Posez ou cliquez sur un objet pour l'inspecter.</p>
+        </div>
+
+        <hr class="border-slate-800">
+
+        <div class="mb-2">
+          <h2 class="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-1.5">Style graphique</h2>
+          <select id="themeSelect" onchange="setTheme(this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-100">
+            <option value="neon">🌌 Néon</option><option value="nature">🌿 Nature</option><option value="glace">❄️ Glace</option><option value="enfer">🔥 Enfer</option><option value="desert">🏜️ Désert</option><option value="ville">🏙️ Ville</option>
+          </select>
+        </div>
+        <!-- Palette Grid -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+          <h2 class="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-1.5">Palette d'objets</h2>
+          <div class="grid grid-cols-2 gap-1.5 overflow-y-auto pr-1" id="paletteGrid"></div>
+        </div>
+
+        <hr class="border-slate-800">
+
+        <!-- Actions -->
+        <div class="space-y-1.5">
+          <button onclick="togglePlaytest()" id="btnPlaytest" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-950/50">
+            <i class="fa-solid fa-play"></i> Mode Test (Validation)
+          </button>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button onclick="clearCurrentLevel()" class="py-2 bg-red-950/60 hover:bg-red-900/60 text-red-300 border border-red-800/40 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition">
+              <i class="fa-solid fa-trash-can"></i> Effacer Tout
+            </button>
+            <button onclick="saveToLocalSlot()" class="py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition">
+              <i class="fa-solid fa-floppy-disk"></i> Enregistrer
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Interactive Canvas -->
+      <canvas id="mainCanvas" class="bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 max-w-full max-h-full"></canvas>
+
+      <!-- Toast Overlay Container -->
+      <div id="winOverlay" class="hidden absolute inset-0 z-40 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm">
+        <div class="bg-slate-900 border border-emerald-500/40 rounded-2xl p-6 text-center space-y-3 shadow-2xl">
+          <div class="text-5xl">🏆</div>
+          <h3 class="font-bold text-xl text-emerald-400">Niveau terminé !</h3>
+          <p id="winStar" class="hidden text-lg font-black text-amber-300 animate-pulse">⭐ Étoile obtenue !</p>
+          <p id="winStats" class="text-sm text-slate-300"></p>
+          <p class="text-[11px] text-violet-300">👻 Ton meilleur run apparaît en fantôme à la prochaine partie</p>
+          <p id="winBest" class="text-xs text-amber-300 font-semibold"></p>
+          <div class="flex flex-col gap-2 pt-1">
+            <button onclick="restartLevel()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold text-xs">🔁 Rejouer depuis le début</button>
+            <p id="winSeries" class="hidden text-sm font-bold text-fuchsia-300"></p>
+            <button id="winNextBtn" onclick="goNextLevel()" class="hidden px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-xs"></button>
+            <button id="winEditBtn" onclick="restartLevel(); togglePlaytest()" class="hidden px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl font-bold text-xs">✏️ Retour à l'éditeur</button>
+          </div>
+        </div>
+      </div>
+      <div id="toastContainer" class="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col gap-2 z-40 pointer-events-none"></div>
+
+      <!-- Mobile Touch Controls -->
+      <div id="touchControls" class="absolute bottom-6 left-6 right-6 flex justify-between items-end pointer-events-none z-30 hidden">
+        <div class="flex gap-2 pointer-events-auto">
+          <button id="btnLeft" class="w-14 h-14 bg-slate-900/80 active:bg-amber-600/80 border border-slate-700 active:border-amber-400 rounded-2xl flex items-center justify-center text-white text-xl shadow-xl backdrop-blur transition transform active:scale-95 select-none touch-none">
+            <i class="fa-solid fa-arrow-left"></i>
+          </button>
+          <button id="btnRight" class="w-14 h-14 bg-slate-900/80 active:bg-amber-600/80 border border-slate-700 active:border-amber-400 rounded-2xl flex items-center justify-center text-white text-xl shadow-xl backdrop-blur transition transform active:scale-95 select-none touch-none">
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+        <div class="pointer-events-auto">
+          <button id="btnJump" class="w-16 h-16 bg-gradient-to-tr from-red-600 to-amber-500 active:from-red-500 active:to-amber-400 border border-amber-300/40 rounded-full flex items-center justify-center text-white text-2xl shadow-xl shadow-red-950/50 backdrop-blur transition transform active:scale-95 select-none touch-none">
+            <i class="fa-solid fa-arrow-up"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW: COMMUNITY CATALOGUE -->
+    <div id="viewMine" class="hidden flex-1 bg-slate-950 p-6 overflow-y-auto z-10">
+      <div class="max-w-5xl mx-auto space-y-4">
+        <div class="flex items-center justify-between gap-3">
+          <div><h2 class="text-lg font-bold text-slate-100">📁 Mes niveaux</h2><p class="text-xs text-slate-400">Tout ce que tu enregistres arrive ici : modifie, joue, renomme, relie en série, publie.</p></div>
+          <button onclick="newMineLevel()" class="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-xs font-bold rounded-xl">＋ Nouveau niveau</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="mineGrid"></div>
+      </div>
+    </div>
+    <div id="viewCommunity" class="hidden flex-1 bg-slate-950 p-6 overflow-y-auto z-10">
+      <div class="max-w-6xl mx-auto space-y-6">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+          <div>
+            <h2 class="text-2xl font-black text-amber-400">Catalogue des Niveaux Communautaires</h2>
+            <p class="text-slate-400 text-xs">Explorez, testez et jouez aux créations de la communauté !</p>
+          </div>
+          <div class="flex gap-2 items-center flex-wrap justify-end">
+            <button onclick="uploadLocalCatalog()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-[11px] font-bold rounded-xl">⬆ Envoyer mes niveaux</button>
+            <button onclick="testShared()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-[11px] font-bold rounded-xl">🔌 Tester le serveur</button>
+            <button onclick="setDbUrl()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-[11px] font-bold rounded-xl" title="Serveur partagé">⚙️</button>
+            <button onclick="exportCatalog()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-[11px] font-bold rounded-xl">⬇ Exporter (GitHub)</button>
+            <label class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-[11px] font-bold rounded-xl cursor-pointer">📥 Importer<input type="file" accept=".json" class="hidden" onchange="importCatalog(this)"></label>
+            <input type="text" id="inputSearchLevel" onkeyup="renderCommunityCatalog()" placeholder="Rechercher nom/auteur..." class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500 w-64">
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="communityGrid"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL CONFIG SENSOR -->
+  <div id="modalSensorConfig" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-lg text-purple-400 flex items-center gap-2">
+          <i class="fa-solid fa-sliders"></i> Configuration du Capteur
+        </h3>
+        <button onclick="closeModal('modalSensorConfig')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="checkSensorInvisible" class="rounded border-slate-700 bg-slate-950 text-purple-500 focus:ring-0">
+          <label for="checkSensorInvisible" class="font-semibold text-slate-200">Capteur INVISIBLE pendant le jeu</label>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Taille de la zone de détection</label>
+          <select id="selectSensorRadius" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-slate-200">
+            <option value="0.5">Contact (très précis)</option><option value="1">Bloc exact (1x1)</option><option value="2">Petite zone (2)</option>
+            <option value="3">Zone moyenne (3x3)</option><option value="5">Grande zone (5x5)</option><option value="8">Très grande zone (8)</option><option value="99">Plein écran (Global)</option>
+          </select>
+        </div>
+
+        <hr class="border-slate-800">
+
+        <div>
+          <label class="block font-semibold text-purple-300 mb-1">Action du capteur</label>
+          <select id="selectTriggerAction" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-slate-200">
+            <option value="GLOBAL_GRAVITY">Inverser Gravité Globale (Sans liaison requise)</option>
+            <option value="DEPLOY">Faire Apparaître la cible</option>
+            <option value="BREAK">Faire Disparaître / Casser</option>
+            <option value="TRANSFORM_SPIKE">Transformer en Piques Mortelles</option>
+            <option value="TRANSFORM_FLAME">Transformer en Lance-Flammes</option>
+            <option value="SPAWN_ENEMY">Faire apparaître un Ennemi</option>
+            <option value="TELEPORT">Téléporter le Joueur (vers Destination, sinon sur le capteur)</option>
+            <option value="HIDE">Cacher la cible (disparaît, peut revenir)</option>
+            <option value="TOGGLE">Basculer la cible (apparaît / disparaît)</option>
+            <option value="MOVE_TARGET">Déplacer la cible vers Destination (drapeau voyageur…)</option>
+            <option value="TRANSFORM_SAW">Transformer en Scie</option>
+            <option value="TRANSFORM_SOLID">Transformer en Bloc Solide</option>
+            <option value="LAUNCH">Propulser le Joueur vers le haut</option>
+            <option value="MESSAGE">Afficher un message troll</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="block text-[10px] text-slate-500">Destination X (téléport / déplacer)</label><input type="number" id="sensorDestX" min="0" max="24" placeholder="—" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-slate-200"></div>
+          <div><label class="block text-[10px] text-slate-500">Destination Y</label><input type="number" id="sensorDestY" min="0" max="14" placeholder="—" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-slate-200"></div>
+        </div>
+        <div><label class="block font-semibold text-slate-300 mb-1">Message (action « message »)</label><input type="text" id="sensorText" maxlength="60" placeholder="Ex : Tu y as cru ? 😈" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-slate-200"></div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Réarmement</label>
+          <select id="selectSensorCooldown" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-slate-200">
+            <option value="0">Une seule fois</option><option value="1">Se réarme après 1 s</option><option value="2">Se réarme après 2 s</option><option value="4">Se réarme après 4 s</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="checkSensorInvert" class="rounded border-slate-700 bg-slate-950 text-purple-500 focus:ring-0">
+          <label for="checkSensorInvert" class="font-semibold text-slate-200">Inversé : se déclenche quand le joueur est HORS de la zone</label>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Délai avant déclenchement</label>
+          <select id="selectTriggerDelay" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-slate-200">
+            <option value="0">Instantané (0s)</option>
+            <option value="0.2">0.2 Seconde</option>
+            <option value="0.5">0.5 Seconde</option>
+            <option value="1">1.0 Seconde</option><option value="2">2.0 Secondes</option><option value="3">3.0 Secondes</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 pt-2">
+        <button onclick="closeModal('modalSensorConfig')" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 font-semibold rounded-xl text-xs transition">Annuler</button>
+        <button onclick="saveSensorConfig()" class="flex-1 py-2 bg-purple-600 hover:bg-purple-500 font-bold rounded-xl text-xs transition">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL BLOCK INSPECTOR -->
+  <div id="modalBlockInspector" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-lg text-amber-400 flex items-center gap-2">
+          <i class="fa-solid fa-sliders"></i> Inspection de l'Objet
+        </h3>
+        <button onclick="closeModal('modalBlockInspector')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+          <span class="font-bold text-slate-300" id="inspectItemTypeName">Bloc</span>
+          <span class="text-[10px] text-slate-500 font-mono" id="inspectItemCoord">X:0 Y:0</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="inspectCheckInvisible" class="rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-0">
+          <label for="inspectCheckInvisible" class="font-semibold text-slate-200">Masqué / Invisible au démarrage du jeu</label>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="inspectCheckGhost" class="rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-0">
+          <label for="inspectCheckGhost" class="font-semibold text-slate-200">👻 Invisible mais bien présent (solide / mortel)</label>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="inspectCheckFlee" class="rounded border-slate-700 bg-slate-950 text-amber-500 focus:ring-0">
+          <label for="inspectCheckFlee" class="font-semibold text-slate-200">🏃 Drapeau fuyard : se téléporte à la Destination quand on s'approche</label>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Réapparition (sol friable)</label>
+          <select id="inspectRespawn" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-slate-200">
+            <option value="0">Jamais</option><option value="2">Après 2 s</option><option value="4">Après 4 s</option><option value="8">Après 8 s</option>
+          </select>
+        </div>
+        <p class="text-[10px] text-slate-500">🔗 Pour coller ce bloc à une plateforme mobile : outil « Relier » → clique ce bloc, puis la plateforme. Le Téléporteur et le drapeau fuyard utilisent la Destination ci-dessous.</p>
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Trajectoire & Déplacement (Waypoints)</label>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] text-slate-500">Destination X (grille)</label>
+              <input type="number" id="inspectPathX" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-slate-200" min="0" max="24">
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-500">Destination Y (grille)</label>
+              <input type="number" id="inspectPathY" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-slate-200" min="0" max="14">
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Vitesse du mouvement</label>
+          <select id="inspectMoveSpeed" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-slate-200">
+            <option value="1">Lente</option>
+            <option value="2">Normale</option>
+            <option value="4">Rapide</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 pt-2">
+        <button onclick="closeModal('modalBlockInspector')" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 font-semibold rounded-xl text-xs transition">Annuler</button>
+        <button onclick="saveBlockInspectorConfig()" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 font-bold rounded-xl text-xs transition">Appliquer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PUBLICATION -->
+  <div id="modalPublish" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-lg text-emerald-400 flex items-center gap-2">
+          <i class="fa-solid fa-paper-plane"></i> Publier votre Niveau
+        </h3>
+        <button onclick="closeModal('modalPublish')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div id="publishValidationStatus" class="p-3 rounded-xl border text-xs font-semibold"></div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Nom du Niveau</label>
+          <input type="text" id="pubLevelTitle" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" placeholder="Ex: L'Épreuve Infernale">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Votre Pseudo</label>
+          <input type="text" id="pubCreatorName" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-slate-100 focus:outline-none focus:border-emerald-500" placeholder="Ex: MasterDevil">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Niveau suivant (série de niveaux)</label>
+          <select id="pubNextLevel" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-slate-100"><option value="">Aucun (niveau seul)</option></select>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 pt-2">
+        <button onclick="closeModal('modalPublish')" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 font-semibold rounded-xl text-xs transition">Annuler</button>
+        <button id="btnStartBotTest" onclick="startBotSimulationWorkflow()" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl text-xs transition">Lancer Test IA & Publier</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL BOTS SIMULATION -->
+  <div id="modalBotSim" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-lg text-amber-400 flex items-center gap-2">
+          <i class="fa-solid fa-robot"></i> Simulation des Bots IA
+        </h3>
+        <span id="botWaveBadge" class="px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold rounded-lg text-xs">Vague 1/2</span>
+      </div>
+
+      <p id="botProgressText" class="text-xs text-slate-400">Simulation de la première vague en cours...</p>
+
+      <div class="flex justify-center bg-slate-950 p-2 rounded-xl border border-slate-800">
+        <canvas id="simCanvas" width="400" height="240" class="rounded-lg bg-slate-900"></canvas>
+      </div>
+
+      <div class="flex items-center justify-between text-xs">
+        <span id="botSuccessRate" class="font-bold text-slate-300">Réussite: 0 / 5</span>
+        <div id="botResultBadge" class="hidden p-2 rounded-xl font-bold border text-xs"></div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="btnConfirmPublish" onclick="confirmFinalPublish()" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl text-xs transition">
+          🚀 Valider & Publier
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CODE IMPORT/EXPORT -->
+  <div id="modalCode" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-lg text-indigo-400 flex items-center gap-2">
+          <i class="fa-solid fa-code"></i> Code Niveau (Base64)
+        </h3>
+        <button onclick="closeModal('modalCode')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <textarea id="levelCodeTextarea" rows="5" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 focus:outline-none focus:border-indigo-500 select-all"></textarea>
+
+      <div class="flex items-center gap-2">
+        <button onclick="copyLevelCodeToClipboard()" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 font-bold rounded-xl text-xs transition">Copier</button>
+        <button onclick="importLevelCodeFromInput()" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl text-xs transition">Importer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN ENGINE LOGIC SCRIPT -->
+  <script>
+    const GRID_SIZE = 32;
+    const GRID_COLS = 25;
+    const GRID_ROWS = 15;
+
+    let currentMode = 'edit';
+    let isPlaytesting = false;
+    let creatorHasFinished = false;
+
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = GRID_COLS * GRID_SIZE;
+    canvas.height = GRID_ROWS * GRID_SIZE;
+
+    const ITEM_TYPES = {
+      PLAYER: { id: 'PLAYER', name: 'Départ Joueur', icon: 'fa-user-ninja', color: '#3b82f6' },
+      FLAG: { id: 'FLAG', name: 'Arrivée', icon: 'fa-flag-checkered', color: '#22c55e' },
+      CHECKPOINT: { id: 'CHECKPOINT', name: 'Checkpoint', icon: 'fa-location-dot', color: '#ec4899' },
+      SOLID: { id: 'SOLID', name: 'Sol Solide', icon: 'fa-cube', color: '#64748b' },
+      FAKE_BLOCK: { id: 'FAKE_BLOCK', name: 'Faux Bloc', icon: 'fa-ghost', color: '#94a3b8' },
+      MOVING_PLATFORM: { id: 'MOVING_PLATFORM', name: 'Plateforme Mobile', icon: 'fa-arrows-left-right', color: '#38bdf8' },
+      BOUNCER: { id: 'BOUNCER', name: 'Trampoline', icon: 'fa-bolt', color: '#10b981' },
+      SPIKE: { id: 'SPIKE', name: 'Pique Mortelle', icon: 'fa-triangle-exclamation', color: '#ef4444' },
+      SAW: { id: 'SAW', name: 'Scie Tournante', icon: 'fa-compact-disc', color: '#f97316' },
+      FLAME: { id: 'FLAME', name: 'Lance-Flammes', icon: 'fa-fire', color: '#eab308' },
+      ENEMY: { id: 'ENEMY', name: 'Ennemi Patrouille', icon: 'fa-skull', color: '#d946ef' },
+      ICE: { id: 'ICE', name: 'Glace Glissante', icon: 'fa-snowflake', color: '#7dd3fc' },
+      CONVEYOR: { id: 'CONVEYOR', name: 'Tapis Roulant', icon: 'fa-angles-right', color: '#94a3b8' },
+      LAVA: { id: 'LAVA', name: 'Lave', icon: 'fa-water', color: '#f97316' },
+      CRUMBLE: { id: 'CRUMBLE', name: 'Sol Friable', icon: 'fa-cubes', color: '#a16207' },
+      COIN: { id: 'COIN', name: 'Pièce (à ramasser)', icon: 'fa-coins', color: '#fbbf24' },
+      DOOR: { id: 'DOOR', name: 'Porte à Pièces', icon: 'fa-door-closed', color: '#78716c' },
+      FAKE_FLAG: { id: 'FAKE_FLAG', name: 'Faux Drapeau', icon: 'fa-flag', color: '#ef4444' },
+      WIND: { id: 'WIND', name: 'Courant d\'Air', icon: 'fa-wind', color: '#67e8f9' },
+      GRAVITY_PAD: { id: 'GRAVITY_PAD', name: 'Inverseur Gravité', icon: 'fa-arrows-up-down', color: '#c084fc' },
+      TELEPORTER: { id: 'TELEPORTER', name: 'Téléporteur', icon: 'fa-circle-notch', color: '#e879f9' },
+      SENSOR: { id: 'SENSOR', name: 'Capteur Proximité', icon: 'fa-eye', color: '#a855f7' }
+    };
+
+    let selectedTool = 'draw';
+    let selectedItemType = ITEM_TYPES.SOLID.id;
+    let selectedSensorForLink = null, pendingGlue = null;
+    let activeConfigSensor = null;
+    let activeInspectedObj = null;
+
+    let currentLevel = {
+      id: 'level_' + Date.now(),
+      title: 'Mon Niveau Devil Studio',
+      author: 'Joueur',
+      grid: [
+        { id: 'p1', type: 'PLAYER', x: 2, y: 11 },
+        { id: 'f1', type: 'FLAG', x: 22, y: 11 },
+        { id: 's1', type: 'SOLID', x: 1, y: 12 }, { id: 's2', type: 'SOLID', x: 2, y: 12 }, { id: 's3', type: 'SOLID', x: 3, y: 12 },
+        { id: 's4', type: 'SOLID', x: 20, y: 12 }, { id: 's5', type: 'SOLID', x: 21, y: 12 }, { id: 's6', type: 'SOLID', x: 22, y: 12 }
+      ],
+      links: []
+    };
+
+    let communityCatalog = [];
+    let deaths = 0;
+    let player = {
+      x: 0, y: 0, vx: 0, vy: 0, w: 22, h: 26, grounded: false, alive: true, checkpointPos: null, gravityDir: 1
+    };
+
+    let keys = {};
+    let touchState = { left: false, right: false, jump: false };
+    let dynamicEntities = [];
+    let lastTime = 0;
+    let globalFlameTimer = 0;
+
+    window.onload = function() {
+      loadCommunityCatalog();
+      migrateOldSave();
+      buildPaletteUI();
+      bindTouchEvents();
+      resetCurrentPlaySession();
+
+      window.addEventListener('keydown', e => {
+        keys[e.code] = true;
+        if (/INPUT|TEXTAREA/.test((e.target.tagName || ''))) return;
+        if (e.code === 'KeyR') restartLevel();
+        if (e.code === 'KeyP' || e.code === 'Escape') paused = !paused;
+        if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code) && (currentMode === 'play' || isPlaytesting)) e.preventDefault();
+      });
+      window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+      canvas.addEventListener('pointerdown', handleCanvasClick);
+      requestAnimationFrame(gameLoop);
+    };
+
+    function buildPaletteUI() {
+      const paletteGrid = document.getElementById('paletteGrid');
+      paletteGrid.innerHTML = '';
+      Object.values(ITEM_TYPES).forEach(item => {
+        const btn = document.createElement('button');
+        btn.id = 'palette_' + item.id;
+        btn.onclick = () => selectPaletteItem(item.id);
+        const isActive = selectedItemType === item.id;
+        btn.className = isActive
+          ? "p-2 rounded-xl border bg-amber-500/20 border-amber-500 text-slate-100 font-bold text-[10px] flex items-center gap-2 transition"
+          : "p-2 rounded-xl border bg-slate-800 border-slate-700 text-slate-300 font-semibold text-[10px] flex items-center gap-2 transition hover:bg-slate-700";
+        btn.innerHTML = `<i class="fa-solid ${item.icon}" style="color:${item.color}"></i> <span class="truncate">${item.name}</span>`;
+        paletteGrid.appendChild(btn);
+      });
+    }
+
+    function selectPaletteItem(id) {
+      selectedItemType = id;
+      setTool('draw');
+      buildPaletteUI();
+    }
+
+    function switchMode(mode) {
+      currentMode = mode;
+      isPlaytesting = false;
+
+      document.getElementById('viewWorkspace').classList.toggle('hidden', mode === 'community' || mode === 'mine');
+      document.getElementById('viewMine').classList.toggle('hidden', mode !== 'mine');
+      document.getElementById('viewCommunity').classList.toggle('hidden', mode !== 'community');
+      document.getElementById('editorSidebar').classList.toggle('hidden', mode !== 'edit');
+      document.getElementById('gameInfoOverlay').classList.toggle('hidden', mode === 'edit' || mode === 'mine');
+      document.getElementById('touchControls').classList.toggle('hidden', mode === 'edit' || mode === 'mine');
+
+      ['Edit', 'Play', 'Mine', 'Community'].forEach(m => {
+        const btn = document.getElementById('tab' + m);
+        const active = mode === m.toLowerCase();
+        btn.className = active
+          ? 'px-4 py-1.5 rounded-lg font-semibold text-xs transition flex items-center gap-2 bg-gradient-to-r from-red-600 to-amber-600 text-white shadow-md'
+          : 'px-4 py-1.5 rounded-lg font-semibold text-xs transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900';
+      });
+
+      if (mode === 'community') { renderCommunityCatalog(); loadShared(); }
+      if (mode === 'mine') renderMine();
+      if (mode === 'edit' || mode === 'mine') currentPack = null;
+      restartLevel();
+    }
+
+    function togglePlaytest() {
+      isPlaytesting = !isPlaytesting;
+      const btn = document.getElementById('btnPlaytest');
+      if (isPlaytesting) {
+        btn.innerHTML = `<i class="fa-solid fa-stop"></i> Quitter le Test`;
+        btn.className = "w-full py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg";
+        document.getElementById('touchControls').classList.remove('hidden');
+      } else {
+        btn.innerHTML = `<i class="fa-solid fa-play"></i> Mode Test (Validation)`;
+        btn.className = "w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-950/50";
+        document.getElementById('touchControls').classList.add('hidden');
+      }
+      restartLevel();
+    }
+
+    function setTool(tool) {
+      selectedTool = tool;
+      selectedSensorForLink = null; pendingGlue = null;
+      ['Draw', 'Inspect', 'Link', 'Erase'].forEach(t => {
+        const btn = document.getElementById('tool' + t);
+        if (btn) {
+          const isActive = tool === t.toLowerCase();
+          btn.className = isActive
+            ? 'p-2 rounded-xl border bg-amber-500/20 border-amber-500 text-amber-300 font-bold text-[10px] flex flex-col items-center gap-1 transition'
+            : 'p-2 rounded-xl border bg-slate-800 border-slate-700 text-slate-400 font-bold text-[10px] flex flex-col items-center gap-1 transition hover:bg-slate-700';
+        }
+      });
+    }
+
+    function handleCanvasClick(e) {
+      if (currentMode !== 'edit' || isPlaytesting) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+
+      const gridX = Math.floor(((e.clientX - rect.left) * scaleX) / GRID_SIZE);
+      const gridY = Math.floor(((e.clientY - rect.top) * scaleY) / GRID_SIZE);
+
+      if (gridX < 0 || gridX >= GRID_COLS || gridY < 0 || gridY >= GRID_ROWS) return;
+
+      const clickedObj = currentLevel.grid.find(o => o.x === gridX && o.y === gridY);
+
+      if (selectedTool === 'inspect') {
+        if (clickedObj) openBlockInspectorModal(clickedObj);
+        else showToast("Aucun objet ici !", "amber");
+        return;
+      }
+
+      if (selectedTool === 'link') {
+        if (pendingGlue) {
+          const child = pendingGlue; pendingGlue = null;
+          if (clickedObj && clickedObj.id === child.id) { delete child.glueTo; showToast('Collage retiré', 'amber'); }
+          else if (clickedObj && (clickedObj.pathEnd || clickedObj.glueTo)) { child.glueTo = clickedObj.id; creatorHasFinished = false; showToast('🔗 Bloc collé : il bouge avec la plateforme !', 'purple'); }
+          else showToast('La cible doit être un objet mobile (Inspecter → Destination)', 'amber');
+          return;
+        }
+        if (!selectedSensorForLink) {
+          if (clickedObj && clickedObj.type === 'SENSOR') {
+            selectedSensorForLink = clickedObj;
+            openSensorConfigModal(clickedObj);
+          } else if (clickedObj) {
+            pendingGlue = clickedObj; showToast('Maintenant clique la plateforme mobile à laquelle le coller', 'purple');
+          } else {
+            showToast("Capteur → cible, ou bloc → plateforme mobile", "amber");
+          }
+        } else {
+          if (clickedObj && clickedObj.id !== selectedSensorForLink.id) {
+            currentLevel.links.push({ sensorId: selectedSensorForLink.id, targetId: clickedObj.id });
+            showToast("Objet relié !", "purple");
+            selectedSensorForLink = null;
+          }
+        }
+        return;
+      }
+
+      if (clickedObj) {
+        currentLevel.links = currentLevel.links.filter(l => l.sensorId !== clickedObj.id && l.targetId !== clickedObj.id);
+        const idx = currentLevel.grid.indexOf(clickedObj);
+        currentLevel.grid.splice(idx, 1);
+      }
+
+      if (selectedTool === 'draw') {
+        if (selectedItemType === 'PLAYER') currentLevel.grid = currentLevel.grid.filter(o => o.type !== 'PLAYER');
+
+        const newObj = {
+          id: 'obj_' + Date.now() + '_' + Math.floor(Math.random() * 100),
+          type: selectedItemType,
+          x: gridX,
+          y: gridY,
+          config: {}
+        };
+        currentLevel.grid.push(newObj);
+        creatorHasFinished = false;
+
+        if (selectedItemType === 'SENSOR') openSensorConfigModal(newObj);
+      }
+    }
+
+    function openSensorConfigModal(sensorObj) {
+      activeConfigSensor = sensorObj;
+      const cfg = sensorObj.config || {};
+      document.getElementById('checkSensorInvisible').checked = cfg.invisible !== false;
+      document.getElementById('selectSensorRadius').value = cfg.radius || 1;
+      document.getElementById('sensorDestX').value = cfg.destX ?? ''; document.getElementById('sensorDestY').value = cfg.destY ?? '';
+      document.getElementById('sensorText').value = cfg.text || ''; document.getElementById('selectSensorCooldown').value = cfg.cooldown || 0;
+      document.getElementById('checkSensorInvert').checked = !!cfg.invert;
+      document.getElementById('selectTriggerAction').value = cfg.action || 'DEPLOY';
+      document.getElementById('selectTriggerDelay').value = cfg.delay || 0;
+      document.getElementById('modalSensorConfig').classList.remove('hidden');
+    }
+
+    function saveSensorConfig() {
+      if (!activeConfigSensor) return;
+      activeConfigSensor.config = {
+        invisible: document.getElementById('checkSensorInvisible').checked,
+        radius: parseFloat(document.getElementById('selectSensorRadius').value),
+        destX: document.getElementById('sensorDestX').value === '' ? null : parseInt(document.getElementById('sensorDestX').value),
+        destY: document.getElementById('sensorDestY').value === '' ? null : parseInt(document.getElementById('sensorDestY').value),
+        text: document.getElementById('sensorText').value, cooldown: parseFloat(document.getElementById('selectSensorCooldown').value),
+        invert: document.getElementById('checkSensorInvert').checked,
+        action: document.getElementById('selectTriggerAction').value,
+        delay: parseFloat(document.getElementById('selectTriggerDelay').value)
+      };
+      closeModal('modalSensorConfig');
+      showToast("Capteur sauvegardé !", "purple");
+    }
+
+    function openBlockInspectorModal(obj) {
+      activeInspectedObj = obj;
+      document.getElementById('inspectItemTypeName').innerText = ITEM_TYPES[obj.type]?.name || obj.type;
+      document.getElementById('inspectItemCoord').innerText = `X:${obj.x} Y:${obj.y}`;
+      document.getElementById('inspectCheckInvisible').checked = !!obj.hidden;
+      document.getElementById('inspectCheckGhost').checked = !!obj.ghost;
+      document.getElementById('inspectCheckFlee').checked = !!(obj.config && obj.config.flee);
+      document.getElementById('inspectRespawn').value = (obj.config && obj.config.respawn) || 0;
+      document.getElementById('inspectPathX').value = obj.pathEnd ? obj.pathEnd.x : obj.x;
+      document.getElementById('inspectPathY').value = obj.pathEnd ? obj.pathEnd.y : obj.y;
+      document.getElementById('inspectMoveSpeed').value = obj.moveSpeed || 2;
+      document.getElementById('modalBlockInspector').classList.remove('hidden');
+    }
+
+    function saveBlockInspectorConfig() {
+      if (!activeInspectedObj) return;
+      activeInspectedObj.hidden = document.getElementById('inspectCheckInvisible').checked;
+      activeInspectedObj.ghost = document.getElementById('inspectCheckGhost').checked;
+      activeInspectedObj.config = { ...(activeInspectedObj.config || {}), flee: document.getElementById('inspectCheckFlee').checked, respawn: parseFloat(document.getElementById('inspectRespawn').value) };
+      creatorHasFinished = false;
+      const pathX = parseInt(document.getElementById('inspectPathX').value);
+      const pathY = parseInt(document.getElementById('inspectPathY').value);
+      if (pathX !== activeInspectedObj.x || pathY !== activeInspectedObj.y) {
+        activeInspectedObj.pathEnd = { x: pathX, y: pathY };
+      } else {
+        delete activeInspectedObj.pathEnd;
+      }
+      activeInspectedObj.moveSpeed = parseFloat(document.getElementById('inspectMoveSpeed').value);
+      closeModal('modalBlockInspector');
+      showToast("Inspecteur appliqué !", "amber");
+    }
+
+    function resetCurrentPlaySession() {
+      const startObj = currentLevel.grid.find(o => o.type === 'PLAYER');
+      const startX = startObj ? startObj.x * GRID_SIZE + 5 : 50;
+      const startY = startObj ? startObj.y * GRID_SIZE : 300;
+
+      player.x = player.checkpointPos ? player.checkpointPos.x : startX;
+      player.y = player.checkpointPos ? player.checkpointPos.y : startY;
+      player.vx = 0; player.vy = 0;
+      player.grounded = false; player.alive = true; player.gravityDir = 1;
+
+      dynamicEntities = currentLevel.grid.map(obj => ({
+        ...obj,
+        px: obj.x * GRID_SIZE,
+        py: obj.y * GRID_SIZE,
+        startX: obj.x * GRID_SIZE,
+        startY: obj.y * GRID_SIZE,
+        endX: obj.pathEnd ? obj.pathEnd.x * GRID_SIZE : obj.x * GRID_SIZE,
+        endY: obj.pathEnd ? obj.pathEnd.y * GRID_SIZE : obj.y * GRID_SIZE,
+        moveProgress: 0,
+        moveDir: 1,
+        state: obj.hidden ? 'hidden' : 'active',
+        triggered: false,
+        activated: !!(obj.type === 'CHECKPOINT' && player.checkpointPos && player.checkpointPos.x === obj.x * GRID_SIZE && player.checkpointPos.y === obj.y * GRID_SIZE),
+        enemyVx: 60,
+        deltaX: 0, deltaY: 0
+      }));
+
+      applyCoins(dynamicEntities, collectedCoins);
+      document.getElementById('hudDeathCounter').innerText = deaths;
+    }
+
+    function gameLoop(time) {
+      const dt = Math.min((time - lastTime) / 1000, 0.1);
+      lastTime = time;
+      globalFlameTimer += dt;
+      updateParticles(dt);
+      shake = Math.max(0, shake - dt);
+      if ((currentMode === 'play' || isPlaytesting) && player.alive && !levelWon && !paused) { ghostAcc += dt; if (ghostAcc >= 0.05) { ghostAcc -= 0.05; ghostRun.push(Math.round(player.x), Math.round(player.y)); } }
+      if ((currentMode === 'play' || isPlaytesting) && player.alive && !levelWon && !paused) levelTime += dt;
+
+      if ((currentMode === 'play' || isPlaytesting) && player.alive && !levelWon && !paused) {
+        updatePlayerPhysics(dt);
+        updateEntitiesLogic(dt);
+      }
+
+      renderCanvas();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function updatePlayerPhysics(dt) {
+      const moveLeft = keys['ArrowLeft'] || keys['KeyA'] || touchState.left;
+      const moveRight = keys['ArrowRight'] || keys['KeyD'] || touchState.right;
+      const jump = keys['Space'] || keys['ArrowUp'] || keys['KeyW'] || touchState.jump;
+
+      const speed = 180;
+      if (moveLeft) player.vx = -speed;
+      else if (moveRight) player.vx = speed;
+      else player.vx = 0;
+      const surf = surfaceUnder(dynamicEntities, player);
+      if (surf === 'ICE' && player.grounded) { player.slide = (player.slide || 0) + (player.vx - (player.slide || 0)) * Math.min(1, dt * 2.5); player.vx = player.slide; }
+      else player.slide = player.vx;
+      if (surf === 'CONVEYOR' && player.grounded) player.vx += 90;
+
+      const jumpPressed = jump && !player.prevJump; player.prevJump = jump;
+      player.jumpBuf = jumpPressed ? 0.12 : (player.jumpBuf || 0) - dt;
+      player.coyote = player.grounded ? 0.1 : (player.coyote || 0) - dt;
+      if (player.jumpBuf > 0 && player.coyote > 0) {
+        player.vy = -380 * player.gravityDir; player.grounded = false; player.jumping = true; player.jumpBuf = 0; player.coyote = 0;
+        sfx('jump'); burst(player.x + player.w / 2, player.y + (player.gravityDir > 0 ? player.h : 0), '#94a3b8', 6);
+      }
+      if (player.jumping && !jump && player.vy * player.gravityDir < -140) player.vy = -140 * player.gravityDir;
+      if (player.jumping && player.vy * player.gravityDir >= 0) player.jumping = false;
+
+      player.vy += 950 * player.gravityDir * dt;
+
+      // X Movement
+      player.x += player.vx * dt;
+      handleTileCollisions('x');
+
+      // Y Movement
+      player.y += player.vy * dt;
+      player.grounded = false;
+      handleTileCollisions('y');
+
+      if (player.y > canvas.height + 50 || player.y < -100) respawnPlayer();
+    }
+
+    function handleTileCollisions(axis) {
+      dynamicEntities.forEach(ent => {
+        if (ent.state === 'hidden' || ent.state === 'collapsed') return;
+        if (!SOLID_TYPES.includes(ent.type)) return;
+
+        const tileBox = { x: ent.px, y: ent.py, w: GRID_SIZE, h: GRID_SIZE };
+
+        if (isColliding(player, tileBox)) {
+          if (ent.type === 'FAKE_BLOCK') {
+            ent.state = 'collapsed';
+            return;
+          }
+
+          if (axis === 'x') {
+            if (player.vx > 0) player.x = ent.px - player.w;
+            else if (player.vx < 0) player.x = ent.px + GRID_SIZE;
+            player.vx = 0;
+          } else if (axis === 'y') {
+            if (player.vy * player.gravityDir > 0) {
+              player.y = player.gravityDir > 0 ? ent.py - player.h : ent.py + GRID_SIZE;
+              player.vy = 0;
+              player.grounded = true;
+
+              // Moving Platform velocity carry
+              if (ent.deltaX || ent.deltaY) {
+                player.x += ent.deltaX || 0;
+                player.y += ent.deltaY || 0;
+              }
+            } else if (player.vy * player.gravityDir < 0) {
+              player.y = player.gravityDir > 0 ? ent.py + GRID_SIZE : ent.py - player.h;
+              player.vy = 0;
+            }
+          }
+        }
+      });
+    }
+
+    function respawnPlayer() {
+      burst(player.x + player.w / 2, player.y + player.h / 2, '#3b82f6'); sfx('die'); shake = 0.35;
+      deaths++;
+      document.getElementById('hudDeathCounter').innerText = deaths;
+      resetCurrentPlaySession();
+    }
+
+    function updateEntitiesLogic(dt) {
+      dynamicEntities.forEach(ent => {
+        if (isPathMover(ent)) {
+          const oldX = ent.px, oldY = ent.py;
+          ent.moveProgress += dt * (ent.moveSpeed || 2) * 0.3 * ent.moveDir;
+          if (ent.moveProgress >= 1) { ent.moveProgress = 1; ent.moveDir = -1; }
+          if (ent.moveProgress <= 0) { ent.moveProgress = 0; ent.moveDir = 1; }
+          ent.px = ent.startX + (ent.endX - ent.startX) * ent.moveProgress; ent.py = ent.startY + (ent.endY - ent.startY) * ent.moveProgress;
+          ent.deltaX = ent.px - oldX; ent.deltaY = ent.py - oldY;
+        }
+      });
+      applyGlue(dynamicEntities);
+      dynamicEntities.forEach(ent => {
+
+        // Patrol Enemies
+        if (ent.type === 'ENEMY' && ent.state === 'active') {
+          ent.px += ent.enemyVx * dt;
+          if (ent.px > ent.startX + GRID_SIZE * 3 || ent.px < ent.startX - GRID_SIZE * 3) ent.enemyVx *= -1;
+        }
+
+        if (ent.type === 'SENSOR') sensorStep(dynamicEntities, currentLevel.links, player, ent, dt, (fn, sec) => setTimeout(fn, sec * 1000), mainApi);
+        mechanicsStep(dynamicEntities, player, ent, dt, mainApi);
+        if (player._kill) { player._kill = false; respawnPlayer(); return; }
+
+        // Deadly Hazards Collisions
+        if (player.alive) {
+          if (ent.type === 'SPIKE' || ent.type === 'SAW' || ent.type === 'ENEMY' || ent.type === 'LAVA') {
+            if (isColliding(player, { x: ent.px + 4, y: ent.py + 4, w: GRID_SIZE - 8, h: GRID_SIZE - 8 })) respawnPlayer();
+          }
+
+          if (ent.type === 'FLAME') {
+            const flameActive = Math.floor(globalFlameTimer * 2) % 2 === 0;
+            if (flameActive && isColliding(player, { x: ent.px + 4, y: ent.py - 10, w: GRID_SIZE - 8, h: GRID_SIZE + 10 })) respawnPlayer();
+          }
+
+          if (ent.type === 'BOUNCER' && ent.state !== 'hidden' && isColliding(player, { x: ent.px, y: ent.py + 12, w: GRID_SIZE, h: GRID_SIZE - 12 })) {
+            if (player.vy * player.gravityDir > -300) sfx('bounce'); player.vy = -620 * player.gravityDir; player.grounded = false; player.jumping = false;
+          }
+
+          if (ent.type === 'CHECKPOINT' && !ent.activated) {
+            if (isColliding(player, { x: ent.px, y: ent.py, w: GRID_SIZE, h: GRID_SIZE })) {
+              ent.activated = true;
+              player.checkpointPos = { x: ent.px, y: ent.py };
+              showToast("🚩 Checkpoint Validé !", "emerald"); sfx('checkpoint'); burst(ent.px + 16, ent.py + 8, '#ec4899', 18);
+            }
+          }
+
+          if (ent.type === 'FLAG') {
+            if (isColliding(player, { x: ent.px, y: ent.py, w: GRID_SIZE, h: GRID_SIZE })) {
+              if (ent.state === 'hidden' || ent.state === 'collapsed') { /* drapeau pas encore actif */ }
+              else if (coinsLeft(dynamicEntities) > 0) { if (!(ent.msgCool > globalFlameTimer)) { showToast(`🔒 Il te manque ${coinsLeft(dynamicEntities)} pièce(s) !`, 'amber'); ent.msgCool = globalFlameTimer + 2; } }
+              else winLevel(ent);
+            }
+          }
+        }
+      });
+    }
+
+    function renderCanvas() {
+      ctx.save();
+      if (shake > 0) ctx.translate((Math.random() - .5) * shake * 30, (Math.random() - .5) * shake * 30);
+      drawBackground(ctx, canvas.width, canvas.height);
+
+      if (currentMode === 'edit') {
+        ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1;
+        for (let x = 0; x <= canvas.width; x += GRID_SIZE) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
+        for (let y = 0; y <= canvas.height; y += GRID_SIZE) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke(); }
+
+        currentLevel.grid.forEach(obj => {
+          if (obj.pathEnd) {
+            ctx.save(); ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+            ctx.beginPath(); ctx.moveTo(obj.x * GRID_SIZE + GRID_SIZE/2, obj.y * GRID_SIZE + GRID_SIZE/2);
+            ctx.lineTo(obj.pathEnd.x * GRID_SIZE + GRID_SIZE/2, obj.pathEnd.y * GRID_SIZE + GRID_SIZE/2);
+            ctx.stroke(); ctx.restore();
+          }
+        });
+
+        currentLevel.links.forEach(link => {
+          const sObj = currentLevel.grid.find(o => o.id === link.sensorId);
+          const tObj = currentLevel.grid.find(o => o.id === link.targetId);
+          if (sObj && tObj) {
+            ctx.save(); ctx.strokeStyle = '#c084fc'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+            ctx.beginPath(); ctx.moveTo(sObj.x * GRID_SIZE + GRID_SIZE/2, sObj.y * GRID_SIZE + GRID_SIZE/2);
+            ctx.lineTo(tObj.x * GRID_SIZE + GRID_SIZE/2, tObj.y * GRID_SIZE + GRID_SIZE/2);
+            ctx.stroke(); ctx.restore();
+          }
+        });
+      }
+
+      const list = (currentMode === 'play' || isPlaytesting)
+        ? dynamicEntities
+        : currentLevel.grid.map(g => ({ ...g, px: g.x * GRID_SIZE, py: g.y * GRID_SIZE, state: g.hidden ? 'hidden' : 'active' }));
+
+      list.forEach(ent => {
+        const playing = currentMode === 'play' || isPlaytesting;
+        if (playing && (ent.state === 'hidden' || ent.state === 'collected' || ent.ghost)) return;
+
+        const x = ent.px;
+        const y = ent.py;
+        const cfg = ent.config || {};
+        if (ent.type === 'SENSOR' && cfg.invisible !== false && playing) return;
+
+        ctx.globalAlpha = (ent.state === 'hidden' || ent.ghost) ? 0.35 : 1.0;
+
+        drawTile(ctx, ent, x, y, currentMode === 'edit' && !isPlaytesting);
+        ctx.globalAlpha = 1.0;
+      });
+
+      if (currentMode === 'edit' && !isPlaytesting) {
+        ctx.save(); ctx.setLineDash([4, 4]); ctx.lineWidth = 2;
+        currentLevel.grid.forEach(g => {
+          const cx = g.x * GRID_SIZE + 16, cy = g.y * GRID_SIZE + 16;
+          if (g.glueTo) { const par = currentLevel.grid.find(o => o.id === g.glueTo); if (par) { ctx.strokeStyle = '#22d3ee'; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(par.x * GRID_SIZE + 16, par.y * GRID_SIZE + 16); ctx.stroke(); } }
+          if ((g.type === 'TELEPORTER' || (g.config && g.config.flee)) && g.pathEnd) {
+            const dx = g.pathEnd.x * GRID_SIZE + 16, dy = g.pathEnd.y * GRID_SIZE + 16;
+            ctx.strokeStyle = '#e879f9'; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(dx, dy); ctx.stroke(); ctx.beginPath(); ctx.arc(dx, dy, 12, 0, 6.283); ctx.stroke();
+          }
+        });
+        ctx.restore();
+      }
+
+      if ((currentMode === 'play' || isPlaytesting) && player.alive) {
+        if (ghost && !levelWon && (currentMode === 'play' || isPlaytesting)) {
+          const gi = Math.floor(levelTime / 0.05) * 2;
+          if (gi + 1 < ghost.length) drawHero(ctx, { x: ghost[gi], y: ghost[gi + 1], w: player.w, h: player.h, vx: 1, gdir: 1 }, '#c4b5fd', 0.3);
+        }
+        drawHero(ctx, player, '#3b82f6', 1);
+      }
+      drawParticles(ctx);
+      if (currentMode === 'play' || isPlaytesting) drawTimerHUD(ctx);
+      ctx.restore();
+    }
+
+    function isColliding(r1, r2) {
+      return r1.x < r2.x + r2.w && r1.x + r1.w > r2.x && r1.y < r2.y + r2.h && r1.y + r1.h > r2.y;
+    }
+
+    // PUBLICATION & LIVE BOTS SIMULATION SYSTEM
+    let botSimLoopId = null;
+    let currentSimBots = [];
+    let evaluatedDifficulty = "Moyen";
+
+    function openPublishModal() {
+      const statusDiv = document.getElementById('publishValidationStatus');
+      const btnStart = document.getElementById('btnStartBotTest');
+      const mineArr = getMine(), mineIds = mineArr.map(m => m.id);
+      document.getElementById('pubNextLevel').innerHTML = '<option value="">Aucun (niveau seul)</option>' +
+        mineArr.filter(m => m.id !== currentLevel.id && m.kind !== 'pack').map(m => `<option value="${m.id}" ${currentLevel.nextId === m.id ? 'selected' : ''}>📁 ${m.title}</option>`).join('') +
+        communityCatalog.filter(l => !mineIds.includes(l.srcId) && l.srcId !== currentLevel.id).map(l => `<option value="${l.id}" ${currentLevel.nextId === l.id ? 'selected' : ''}>🌍 ${l.title} — ${l.author}</option>`).join('');
+      if (!document.getElementById('pubLevelTitle').value) document.getElementById('pubLevelTitle').value = currentLevel.title && !/^(Mon Niveau Devil Studio|Nouveau niveau)$/.test(currentLevel.title) ? currentLevel.title : '';
+      if (!document.getElementById('pubCreatorName').value) document.getElementById('pubCreatorName').value = localStorage.getItem('devil_author') || '';
+
+      if (creatorHasFinished) {
+        statusDiv.className = "p-3 rounded-xl border text-xs font-semibold bg-emerald-950/80 border-emerald-600 text-emerald-300";
+        statusDiv.innerHTML = "✅ Niveau réussi en test créateur ! Vous pouvez publier.";
+        btnStart.disabled = false;
+        btnStart.classList.remove('opacity-50', 'cursor-not-allowed');
+      } else {
+        statusDiv.className = "p-3 rounded-xl border text-xs font-semibold bg-red-950/80 border-red-600 text-red-300";
+        statusDiv.innerHTML = "⚠️ Vous devez réussir votre niveau en Mode Test avant de pouvoir le publier.";
+        btnStart.disabled = true;
+        btnStart.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+      document.getElementById('modalPublish').classList.remove('hidden');
+    }
+
+    function startBotSimulationWorkflow() {
+      const title = document.getElementById('pubLevelTitle').value.trim() || "Nouveau Niveau";
+      const author = document.getElementById('pubCreatorName').value.trim() || "Créateur";
+      currentLevel.title = title;
+      currentLevel.author = author;
+      currentLevel.nextId = document.getElementById('pubNextLevel').value || null;
+      try { localStorage.setItem('devil_author', author); } catch (e) {}
+      if (!pubPack) saveMine(true);
+
+      closeModal('modalPublish');
+      document.getElementById('modalBotSim').classList.remove('hidden');
+      document.getElementById('btnConfirmPublish').classList.add('hidden');
+      document.getElementById('botResultBadge').classList.add('hidden');
+
+      if (pubPack) { simPack = { levels: pubPack.levels, i: 0, ratios: [], deaths: 0, backup: currentLevel }; currentLevel = simPack.levels[0]; }
+      runBotSimulationWave(1, 12);
+    }
+
+
+    // ===== VISUALS: tiles, hero, particles =====
+    let particles = [];
+    function burst(x, y, col, n = 26) {
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * 6.283, s = 80 + Math.random() * 220;
+        particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 90, life: 0.7 + Math.random() * 0.5, max: 1.2, col, r: 2 + Math.random() * 3 });
+      }
+    }
+    function updateParticles(dt) {
+      particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 700 * dt; p.life -= dt; });
+      particles = particles.filter(p => p.life > 0);
+    }
+    function drawParticles(c) {
+      particles.forEach(p => { c.globalAlpha = Math.max(0, p.life / p.max); c.fillStyle = p.col; c.fillRect(p.x, p.y, p.r, p.r); });
+      c.globalAlpha = 1;
+    }
+    const THEMES = {
+      neon:   { bg: ['#0b1026', '#1b1038'], s0: '#64748b', s1: '#2f3b52', edge: 'rgba(255,255,255,.2)', thick: 3, fx: 'stars' },
+      nature: { bg: ['#0c2a1c', '#1f5130'], s0: '#8a6540', s1: '#4a3322', edge: '#4ade80', thick: 6, tufts: true, fx: 'fireflies' },
+      glace:  { bg: ['#0c2340', '#1e5a8a'], s0: '#bae6fd', s1: '#5aa7d6', edge: '#ffffff', thick: 4, fx: 'snow' },
+      enfer:  { bg: ['#1c0707', '#5b1010'], s0: '#6b3a30', s1: '#2a1210', edge: '#f97316', thick: 3, fx: 'embers' },
+      ville:  { bg: ['#0a0f1f', '#1d2540'], s0: '#6b7280', s1: '#1f2937', edge: '#fbbf24', thick: 3, fx: 'city' },
+      desert: { bg: ['#4a2310', '#e08a1e'], s0: '#fbbf24', s1: '#b45309', edge: '#fde68a', thick: 4, fx: 'sand' }
+    };
+    function curTheme() { return THEMES[currentLevel.theme] || THEMES.neon; }
+    function setTheme(k) { currentLevel.theme = k; }
+    function drawBackground(c, w, h) {
+      const th = curTheme(), t = globalFlameTimer;
+      const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, th.bg[0]); g.addColorStop(1, th.bg[1]);
+      c.fillStyle = g; c.fillRect(0, 0, w, h);
+      if (th.fx === 'city') {
+        for (let i = 0; i < 12; i++) {
+          const bw = 56, bx = i * 70 - 10, bh = 90 + ((i * 53) % 130), by = h - bh;
+          c.fillStyle = i % 2 ? '#0f172a' : '#111c33'; c.fillRect(bx, by, bw, bh);
+          for (let wy = by + 8; wy < h - 10; wy += 16) for (let wx = bx + 7; wx < bx + bw - 8; wx += 14) {
+            c.fillStyle = ((i * 7 + wx * 3 + wy * 5) % 11) < 4 ? 'rgba(253,224,71,.75)' : 'rgba(30,41,59,.9)'; c.fillRect(wx, wy, 7, 9);
+          }
+        }
+        for (let k = 0; k < 20; k++) { c.fillStyle = `rgba(255,255,255,${0.2 + 0.2 * Math.sin(t + k)})`; c.fillRect((k * 131) % w, (k * 47) % (h * 0.4), 2, 2); }
+        return;
+      }
+      for (let i = 0; i < 45; i++) {
+        const bx = (i * 197) % w, by = (i * 89) % h;
+        if (th.fx === 'stars') { c.fillStyle = `rgba(200,210,255,${0.35 + 0.35 * Math.sin(t * 1.5 + i)})`; c.fillRect(bx, by, 2, 2); }
+        else if (th.fx === 'fireflies') { c.fillStyle = `rgba(253,224,71,${0.3 + 0.5 * Math.sin(t * 2 + i)})`; c.beginPath(); c.arc(bx + Math.sin(t + i) * 20, by + Math.cos(t * .7 + i) * 14, 2.2, 0, 6.283); c.fill(); }
+        else if (th.fx === 'snow') { c.fillStyle = 'rgba(255,255,255,.75)'; c.fillRect((bx + Math.sin(t + i) * 12) % w, (by + t * (20 + i % 5 * 8)) % h, 3, 3); }
+        else if (th.fx === 'embers') { c.fillStyle = `rgba(251,146,60,${0.8 - ((t * (30 + i % 4 * 10) + by) % h) / h})`; c.fillRect(bx + Math.sin(t + i) * 10, h - ((t * (30 + i % 4 * 10) + by) % h), 2, 2); }
+        else { c.fillStyle = 'rgba(255,240,200,.25)'; c.fillRect((bx + t * (60 + i % 4 * 30)) % w, by, 18, 1.5); }
+      }
+    }
+    function drawHero(c, p, col, a) {
+      const gd = p.gravityDir || p.gdir || 1, dir = p.vx < 0 ? -1 : 1;
+      c.save(); c.globalAlpha = a;
+      c.shadowColor = col; c.shadowBlur = 14; c.fillStyle = col;
+      c.beginPath(); c.roundRect(p.x, p.y, p.w, p.h, 6); c.fill();
+      c.shadowBlur = 0;
+      const g = c.createLinearGradient(p.x, p.y, p.x, p.y + p.h);
+      g.addColorStop(0, 'rgba(255,255,255,.35)'); g.addColorStop(1, 'rgba(0,0,0,.35)');
+      c.fillStyle = g; c.fill();
+      const ey = gd > 0 ? p.y + 8 : p.y + p.h - 17;
+      [-4, 4].forEach(o => {
+        const ex = p.x + p.w / 2 + o + dir * 1.5;
+        c.fillStyle = '#fff'; c.beginPath(); c.ellipse(ex, ey + 4, 3.2, 4.2, 0, 0, 6.283); c.fill();
+        c.fillStyle = '#0f172a'; c.fillRect(ex + dir * 1 - 1, ey + 3, 2, 3);
+      });
+      c.restore();
+    }
+    function drawTile(c, ent, x, y, edit) {
+      const S = GRID_SIZE, t = globalFlameTimer;
+      switch (ent.type) {
+        case 'PLAYER': if (edit) drawHero(c, { x: x + 5, y: y + 6, w: player.w, h: player.h, vx: 1, gdir: 1 }, '#3b82f6', 1); break;
+        case 'SOLID': case 'FAKE_BLOCK': {
+          if (ent.state === 'collapsed') break;
+          const g = c.createLinearGradient(x, y, x, y + S);
+          const th = curTheme(); g.addColorStop(0, th.s0); g.addColorStop(1, th.s1);
+          c.fillStyle = g; c.fillRect(x, y, S, S);
+          c.fillStyle = th.edge; c.fillRect(x, y, S, th.thick); if (th.tufts) for (let k = 0; k < 3; k++) c.fillRect(x + 4 + k * 10 + (x % 5), y - 3, 2, 4);
+          c.fillStyle = 'rgba(0,0,0,.28)'; c.fillRect(x, y + S - 3, S, 3);
+          c.strokeStyle = 'rgba(15,23,42,.55)'; c.strokeRect(x + .5, y + .5, S - 1, S - 1);
+          if (ent.type === 'FAKE_BLOCK' && edit) { c.strokeStyle = '#f472b6'; c.setLineDash([3, 3]); c.strokeRect(x + 3, y + 3, S - 6, S - 6); c.setLineDash([]); }
+          break;
+        }
+        case 'MOVING_PLATFORM': {
+          const g = c.createLinearGradient(x, y + 4, x, y + 16);
+          g.addColorStop(0, '#7dd3fc'); g.addColorStop(1, '#0284c7');
+          c.shadowColor = '#38bdf8'; c.shadowBlur = 8; c.fillStyle = g;
+          c.beginPath(); c.roundRect(x, y + 4, S, 12, 4); c.fill(); c.shadowBlur = 0; break;
+        }
+        case 'CRUMBLE': {
+          if (ent.state === 'collapsed') break;
+          const k = ent.crumbling ? Math.min(1, (ent.crumbleT || 0) / 0.45) : 0, sh = ent.crumbling ? (Math.random() - .5) * 3 : 0;
+          const g = c.createLinearGradient(x, y, x, y + S); g.addColorStop(0, '#c08a3e'); g.addColorStop(1, '#6b4a1f');
+          c.globalAlpha *= 1 - k * 0.4; c.fillStyle = g; c.fillRect(x + sh, y + sh, S, S);
+          c.strokeStyle = 'rgba(40,20,5,.8)'; c.beginPath(); c.moveTo(x + 6 + sh, y + sh); c.lineTo(x + 14 + sh, y + 14 + sh); c.lineTo(x + 8 + sh, y + 24 + sh);
+          c.moveTo(x + 22 + sh, y + 4 + sh); c.lineTo(x + 18 + sh, y + 18 + sh); c.lineTo(x + 26 + sh, y + S + sh); c.stroke();
+          c.fillStyle = 'rgba(255,255,255,.15)'; c.fillRect(x + sh, y + sh, S, 3); break;
+        }
+        case 'COIN': {
+          if (ent.state === 'collected') break;
+          const wv = Math.abs(Math.cos(t * 4 + x)) * 9 + 2;
+          c.shadowColor = '#fbbf24'; c.shadowBlur = 10; c.fillStyle = '#fbbf24'; c.beginPath(); c.ellipse(x + S / 2, y + S / 2 + Math.sin(t * 3 + x) * 2, wv, 10, 0, 0, 6.283); c.fill();
+          c.shadowBlur = 0; c.fillStyle = '#fde68a'; c.beginPath(); c.ellipse(x + S / 2, y + S / 2 + Math.sin(t * 3 + x) * 2, Math.max(1, wv - 4), 6, 0, 0, 6.283); c.fill(); break;
+        }
+        case 'DOOR': {
+          if (ent.state === 'collapsed') break;
+          const g = c.createLinearGradient(x, y, x + S, y); g.addColorStop(0, '#78716c'); g.addColorStop(1, '#44403c');
+          c.fillStyle = g; c.fillRect(x, y, S, S); c.strokeStyle = '#1c1917'; c.strokeRect(x + .5, y + .5, S - 1, S - 1);
+          c.fillStyle = '#fbbf24'; c.beginPath(); c.arc(x + S / 2, y + 13, 5, 0, 6.283); c.fill(); c.fillRect(x + S / 2 - 2, y + 15, 4, 9); break;
+        }
+        case 'FAKE_FLAG': {
+          drawTile(c, { type: 'FLAG' }, x, y, false);
+          if (edit) { c.strokeStyle = '#ef4444'; c.setLineDash([3, 3]); c.strokeRect(x + 2, y + 2, S - 4, S - 4); c.setLineDash([]); }
+          break;
+        }
+        case 'WIND': {
+          c.fillStyle = 'rgba(103,232,249,.14)'; c.fillRect(x, y, S, S); c.strokeStyle = 'rgba(165,243,252,.85)'; c.lineWidth = 2;
+          for (let k = 0; k < 2; k++) { const yy = y + S - ((t * 50 + k * 16) % S); c.beginPath(); c.moveTo(x + 8, yy + 6); c.lineTo(x + S / 2, yy); c.lineTo(x + S - 8, yy + 6); c.stroke(); }
+          c.lineWidth = 1; break;
+        }
+        case 'GRAVITY_PAD': {
+          c.fillStyle = '#6b21a8'; c.fillRect(x + 2, y + 8, S - 4, S - 16); c.shadowColor = '#c084fc'; c.shadowBlur = 10; c.fillStyle = '#d8b4fe';
+          c.beginPath(); c.moveTo(x + 10, y + 14); c.lineTo(x + 16, y + 6); c.lineTo(x + 22, y + 14); c.moveTo(x + 10, y + 18); c.lineTo(x + 16, y + 26); c.lineTo(x + 22, y + 18); c.fill(); c.shadowBlur = 0; break;
+        }
+        case 'TELEPORTER': {
+          c.save(); c.translate(x + S / 2, y + S / 2); c.shadowColor = '#e879f9'; c.shadowBlur = 12; c.strokeStyle = '#e879f9'; c.lineWidth = 3;
+          c.rotate(t * 3); c.beginPath(); c.arc(0, 0, 12, 0, 4.2); c.stroke(); c.rotate(-t * 6); c.strokeStyle = '#f0abfc'; c.beginPath(); c.arc(0, 0, 6, 0, 4.2); c.stroke(); c.restore(); break;
+        }
+        case 'ICE': {
+          const g = c.createLinearGradient(x, y, x + S, y + S); g.addColorStop(0, '#e0f2fe'); g.addColorStop(1, '#38bdf8');
+          c.fillStyle = g; c.fillRect(x, y, S, S); c.strokeStyle = 'rgba(255,255,255,.8)'; c.beginPath(); c.moveTo(x + 6, y + 24); c.lineTo(x + 16, y + 8); c.moveTo(x + 14, y + 26); c.lineTo(x + 22, y + 14); c.stroke();
+          c.fillStyle = '#fff'; c.fillRect(x, y, S, 3); break;
+        }
+        case 'CONVEYOR': {
+          c.fillStyle = '#334155'; c.fillRect(x, y, S, S); c.fillStyle = '#0f172a'; c.fillRect(x, y + 8, S, 16);
+          c.fillStyle = '#fbbf24'; const o = (t * 40) % 16;
+          for (let k = -1; k < 3; k++) { const cx = x + k * 16 + o; if (cx > x - 1 && cx < x + S - 6) { c.beginPath(); c.moveTo(cx, y + 11); c.lineTo(cx + 6, y + 16); c.lineTo(cx, y + 21); c.fill(); } }
+          c.fillStyle = '#94a3b8'; c.fillRect(x, y, S, 3); break;
+        }
+        case 'LAVA': {
+          const g = c.createLinearGradient(x, y, x, y + S); g.addColorStop(0, '#fde047'); g.addColorStop(.35, '#f97316'); g.addColorStop(1, '#991b1b');
+          c.shadowColor = '#f97316'; c.shadowBlur = 12; c.fillStyle = g; c.beginPath(); c.moveTo(x, y + S);
+          for (let k = 0; k <= 8; k++) c.lineTo(x + k * 4, y + 6 + Math.sin(t * 4 + (x + k * 4) * 0.2) * 3);
+          c.lineTo(x + S, y + S); c.fill(); c.shadowBlur = 0; break;
+        }
+        case 'SPIKE': {
+          c.shadowColor = '#ef4444'; c.shadowBlur = 8;
+          for (let i = 0; i < 2; i++) {
+            const g = c.createLinearGradient(x, y, x, y + S); g.addColorStop(0, '#fecaca'); g.addColorStop(1, '#dc2626');
+            c.fillStyle = g; c.beginPath(); c.moveTo(x + i * S / 2, y + S); c.lineTo(x + i * S / 2 + S / 4, y + 5); c.lineTo(x + (i + 1) * S / 2, y + S); c.fill();
+          }
+          c.shadowBlur = 0; break;
+        }
+        case 'SAW': {
+          c.save(); c.translate(x + S / 2, y + S / 2); c.rotate(t * 9);
+          c.shadowColor = '#f97316'; c.shadowBlur = 10; c.fillStyle = '#fb923c';
+          c.beginPath();
+          for (let i = 0; i < 16; i++) { const r = i % 2 ? 11 : 15, a = i * Math.PI / 8; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+          c.fill(); c.shadowBlur = 0; c.fillStyle = '#7c2d12'; c.beginPath(); c.arc(0, 0, 4, 0, 6.283); c.fill(); c.restore(); break;
+        }
+        case 'FLAME': {
+          c.fillStyle = '#a16207'; c.fillRect(x + 4, y + 16, S - 8, 16);
+          if (Math.floor(t * 2) % 2 === 0) {
+            const g = c.createLinearGradient(x, y - 10, x, y + 16); g.addColorStop(0, 'rgba(253,224,71,.2)'); g.addColorStop(.5, '#f97316'); g.addColorStop(1, '#dc2626');
+            c.shadowColor = '#f97316'; c.shadowBlur = 14; c.fillStyle = g;
+            c.beginPath(); c.roundRect(x + 6, y - 10 + Math.sin(t * 20) * 2, S - 12, 26, 8); c.fill(); c.shadowBlur = 0;
+          }
+          break;
+        }
+        case 'ENEMY': {
+          const bob = Math.sin(t * 8 + x) * 2;
+          c.shadowColor = '#d946ef'; c.shadowBlur = 10; c.fillStyle = '#d946ef';
+          c.beginPath(); c.arc(x + S / 2, y + S / 2 + bob, 11, 0, 6.283); c.fill(); c.shadowBlur = 0;
+          c.fillStyle = '#fff'; c.fillRect(x + 9, y + 11 + bob, 5, 6); c.fillRect(x + 18, y + 11 + bob, 5, 6);
+          c.fillStyle = '#4a044e'; c.fillRect(x + 11, y + 13 + bob, 2, 3); c.fillRect(x + 20, y + 13 + bob, 2, 3); break;
+        }
+        case 'SENSOR': {
+          c.fillStyle = 'rgba(168,85,247,' + (0.5 + 0.3 * Math.sin(t * 4)) + ')';
+          c.beginPath(); c.roundRect(x + 6, y + 6, S - 12, S - 12, 4); c.fill(); break;
+        }
+        case 'BOUNCER': {
+          const sq = Math.abs(Math.sin(t * 5)) * 2;
+          c.fillStyle = '#065f46'; c.fillRect(x + 2, y + 26, S - 4, 6);
+          c.strokeStyle = '#34d399'; c.lineWidth = 2; c.beginPath();
+          for (let i = 0; i < 4; i++) { c.lineTo(x + 8, y + 26 - i * 3 - sq); c.lineTo(x + S - 8, y + 24 - i * 3 - sq); }
+          c.stroke(); c.lineWidth = 1;
+          c.fillStyle = '#10b981'; c.beginPath(); c.roundRect(x + 2, y + 12 + sq, S - 4, 5, 3); c.fill(); break;
+        }
+        case 'CHECKPOINT': {
+          const on = ent.activated;
+          c.fillStyle = '#94a3b8'; c.fillRect(x + 6, y + 2, 3, S - 2);
+          c.fillStyle = on ? '#ec4899' : '#64748b';
+          c.beginPath(); c.moveTo(x + 9, y + 3); c.lineTo(x + 24, y + 9 + (on ? Math.sin(t * 6) * 1.5 : 0)); c.lineTo(x + 9, y + 15); c.fill(); break;
+        }
+        case 'FLAG': {
+          c.fillStyle = '#e2e8f0'; c.fillRect(x + 6, y + 2, 3, S - 2);
+          c.shadowColor = '#22c55e'; c.shadowBlur = 12; c.fillStyle = '#22c55e';
+          c.beginPath(); c.moveTo(x + 9, y + 3); c.lineTo(x + 26, y + 9 + Math.sin(t * 5) * 2); c.lineTo(x + 9, y + 16); c.fill(); c.shadowBlur = 0; break;
+        }
+      }
+    }
+
+    // ===== WIN / RESTART / PAUSE =====
+    let currentPack = null, pubPack = null, simPack = null;
+    const mainApi = {
+      fx: (x, y, col) => burst(x + 16, y + 16, col, 12),
+      coin: e => { collectedCoins.add(e.id); sfx('checkpoint'); burst(e.px + 16, e.py + 16, '#fbbf24', 14); },
+      say: t => showToast(t, 'purple'),
+      flipGravity: () => { player.gravityDir *= -1; sfx('bounce'); },
+      teleport: (x, y) => { player.x = x + 5; player.y = y; player.vx = 0; player.vy = 0; sfx('checkpoint'); },
+      launch: () => { player.vy = -700 * player.gravityDir; player.grounded = false; sfx('bounce'); }
+    };
+    let levelWon = false, paused = false, ghost = null, ghostRun = [], ghostAcc = 0;
+    function restartLevel() {
+      collectedCoins = new Set(); player.checkpointPos = null; deaths = 0; levelTime = 0; levelWon = false; paused = false; particles = []; ghostRun = []; ghostAcc = 0;
+      try { ghost = JSON.parse(localStorage.getItem('devil_ghost_' + (currentLevel.id || 'custom'))); } catch (e) { ghost = null; }
+      document.getElementById('winOverlay').classList.add('hidden');
+      document.getElementById('themeSelect').value = currentLevel.theme || 'neon';
+      resetCurrentPlaySession();
+    }
+    function getProgress() { try { return JSON.parse(localStorage.getItem('devil_progress')) || { done: [] }; } catch (e) { return { done: [] }; } }
+    function isDone(id) { return getProgress().done.includes(id); }
+    function markDone(id) { const pr = getProgress(); if (!pr.done.includes(id)) pr.done.push(id); try { localStorage.setItem('devil_progress', JSON.stringify(pr)); } catch (e) {} }
+    function goNextLevel() { if (currentPack) { currentPack.idx++; loadPackLevel(); } else if (currentLevel.nextId) playAny(currentLevel.nextId); }
+    function winLevel(ent) {
+      if (levelWon) return;
+      levelWon = true; creatorHasFinished = true;
+      sfx('win'); shake = 0.2;
+      ['#22c55e', '#fbbf24', '#38bdf8', '#f472b6', '#a78bfa'].forEach(col => burst(ent.px + 16, ent.py, col, 20));
+      let best = NaN;
+      const key = 'devil_best_' + (currentLevel.id || currentLevel.title || 'custom');
+      try { best = parseFloat(localStorage.getItem(key)); if (!(best <= levelTime)) { localStorage.setItem(key, levelTime); localStorage.setItem(key.replace('best', 'ghost'), JSON.stringify(ghostRun)); } } catch (e) {}
+      document.getElementById('winStats').innerText = `⏱ ${levelTime.toFixed(1)}s  ·  💀 ${deaths} morts`;
+      document.getElementById('winBest').innerText = (best <= levelTime) ? `Meilleur temps : ${best.toFixed(1)}s` : '🥇 Nouveau record !';
+      document.getElementById('winEditBtn').classList.toggle('hidden', !isPlaytesting);
+      const inCat = communityCatalog.find(l => l.id === currentLevel.id);
+      let nxt = findAny(currentLevel.nextId), packEnd = false;
+      if (currentPack) {
+        nxt = currentPack.levels[currentPack.idx + 1] || null; packEnd = !nxt;
+        savePackProgress(currentPack.id, nxt ? currentPack.idx + 1 : 0); if (packEnd) markDone(currentPack.id);
+      }
+      if (!isPlaytesting) markDone(currentPack ? currentPack.id + ':' + currentLevel.id : currentLevel.id);
+      document.getElementById('winStar').classList.toggle('hidden', isPlaytesting);
+      const nb = document.getElementById('winNextBtn'); nb.classList.toggle('hidden', !(nxt && !isPlaytesting)); if (nxt) nb.innerText = currentPack ? `▶ Niveau ${currentPack.idx + 2}/${currentPack.levels.length} : ${nxt.title}` : `▶ Niveau suivant : ${nxt.title}`;
+      const chainEnd = packEnd || (!currentPack && !nxt && [...communityCatalog, ...getMine()].some(l => l.nextId && (l.nextId === currentLevel.id || l.nextId === currentLevel.srcId)));
+      const ws = document.getElementById('winSeries'); ws.classList.toggle('hidden', !chainEnd); ws.innerText = '🎉 Série terminée ! Tous les niveaux sont finis.';
+      document.getElementById('winOverlay').classList.remove('hidden');
+    }
+
+    // ===== SOUND + SCREEN SHAKE + TIMER =====
+    let audioCtx = null, shake = 0, levelTime = 0;
+    function sfx(type) {
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const P = { jump: [320, 640, .12, 'square'], die: [320, 50, .35, 'sawtooth'], bounce: [200, 900, .22, 'sine'],
+                    checkpoint: [500, 1000, .25, 'triangle'], win: [400, 1400, .7, 'triangle'] }[type];
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime;
+        o.type = P[3]; o.frequency.setValueAtTime(P[0], t); o.frequency.exponentialRampToValueAtTime(P[1], t + P[2]);
+        g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.0001, t + P[2]);
+        o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t + P[2]);
+      } catch (e) {}
+    }
+    function drawProgress(c) {
+      if (paused) {
+        c.fillStyle = 'rgba(2,6,23,.6)'; c.fillRect(0, 0, canvas.width, canvas.height);
+        c.fillStyle = '#fff'; c.font = 'bold 40px sans-serif'; c.textAlign = 'center'; c.fillText('⏸ PAUSE', canvas.width / 2, canvas.height / 2);
+        c.font = '16px sans-serif'; c.fillText('P / Échap pour reprendre · R pour recommencer', canvas.width / 2, canvas.height / 2 + 34); c.textAlign = 'left';
+      }
+    }
+    function drawTimerHUD(c) {
+      drawProgress(c);
+      const m = Math.floor(levelTime / 60), sec = (levelTime % 60).toFixed(1).padStart(4, '0');
+      c.save(); c.font = 'bold 16px monospace'; c.textAlign = 'right';
+      c.fillStyle = 'rgba(15,23,42,.6)'; c.beginPath(); c.roundRect(canvas.width - 110, 8, 100, 26, 8); c.fill();
+      c.fillStyle = '#fbbf24'; c.fillText(`⏱ ${m}:${sec}`, canvas.width - 18, 27);
+      const totalCoins = currentLevel.grid.filter(o => o.type === 'COIN').length;
+      if (totalCoins) { c.fillStyle = 'rgba(15,23,42,.6)'; c.beginPath(); c.roundRect(canvas.width - 110, 40, 100, 26, 8); c.fill(); c.fillStyle = '#fde047'; c.fillText(`🪙 ${collectedCoins.size}/${totalCoins}`, canvas.width - 18, 59); }
+      c.restore();
+    }
+
+    // ===== BOT SIMULATION: real physics, same spawn & rules as the player =====
+    const SOLID_TYPES = ['SOLID', 'MOVING_PLATFORM', 'FAKE_BLOCK', 'ICE', 'CONVEYOR', 'CRUMBLE', 'DOOR'];
+    let collectedCoins = new Set();
+    function isPathMover(e) { return (e.endX !== e.startX || e.endY !== e.startY) && e.type !== 'TELEPORTER' && !(e.config && e.config.flee); }
+    function coinsLeft(world) { return world.filter(e => e.type === 'COIN' && e.state !== 'collected').length; }
+    function applyCoins(world, set) { world.forEach(e => { if (e.type === 'COIN' && set.has(e.id)) e.state = 'collected'; }); }
+    function gdOf(a) { return a.gravityDir || a.gdir || 1; }
+    function applyGlue(world) {
+      for (let pass = 0; pass < 2; pass++) world.forEach(e => {
+        if (!e.glueTo) return;
+        const par = world.find(o => o.id === e.glueTo); if (!par) return;
+        const dx = par.deltaX || 0, dy = par.deltaY || 0;
+        e.px += dx; e.py += dy; e.deltaX = dx; e.deltaY = dy;
+      });
+    }
+    // One entity's new mechanics. api: {kill, coin, say, fx, flipGravity, teleport, launch}
+    function mechanicsStep(world, a, e, dt, api) {
+      const S = GRID_SIZE, gd = gdOf(a), box = { x: e.px, y: e.py, w: S, h: S };
+      if (e.type === 'CRUMBLE') {
+        const cfg = e.config || {};
+        if (e.state === 'active' && !e.crumbling) {
+          const below = { x: a.x + 2, y: gd > 0 ? a.y + a.h : a.y - 2, w: a.w - 4, h: 2 };
+          if (isColliding(below, box)) e.crumbling = true;
+        }
+        if (e.crumbling && e.state === 'active') {
+          e.crumbleT = (e.crumbleT || 0) + dt;
+          if (e.crumbleT >= 0.25 && !e.spread) {
+            e.spread = true;
+            world.forEach(o => { if (o.type === 'CRUMBLE' && o.state === 'active' && !o.crumbling && Math.abs(o.startX - e.startX) + Math.abs(o.startY - e.startY) === S) o.crumbling = true; });
+          }
+          if (e.crumbleT >= 0.45) { e.state = 'collapsed'; e.respawnT = cfg.respawn || 0; api.fx(e.px, e.py, '#a16207'); }
+        } else if (e.state === 'collapsed' && e.respawnT > 0) {
+          e.respawnT -= dt; if (e.respawnT <= 0) { e.state = 'active'; e.crumbling = false; e.crumbleT = 0; e.spread = false; }
+        }
+        return;
+      }
+      if (e.state === 'hidden' || e.state === 'collapsed' || e.state === 'collected') return;
+      if (e.type === 'COIN') { if (isColliding(a, { x: e.px + 4, y: e.py + 4, w: S - 8, h: S - 8 })) { e.state = 'collected'; api.coin(e); } }
+      else if (e.type === 'DOOR') { if (coinsLeft(world) === 0) { e.state = 'collapsed'; api.fx(e.px, e.py, '#78716c'); } }
+      else if (e.type === 'FAKE_FLAG') { if (isColliding(a, { x: e.px + 4, y: e.py, w: S - 8, h: S })) { a._kill = true; api.say('Faux drapeau ! 😈'); } }
+      else if (e.type === 'WIND') { if (isColliding(a, box)) { a.vy -= 1700 * gd * dt; if (a.vy * gd < -300) a.vy = -300 * gd; } }
+      else if (e.type === 'GRAVITY_PAD') { if ((a.padCool || 0) <= 0 && isColliding(a, box)) { api.flipGravity(); a.padCool = 0.6; } else if (a.padCool > 0) a.padCool -= dt; }
+      else if (e.type === 'TELEPORTER') {
+        if ((a.tpCool || 0) > 0) a.tpCool -= dt;
+        else if (isColliding(a, box) && (e.endX !== e.startX || e.endY !== e.startY)) { api.fx(e.px, e.py, '#e879f9'); api.teleport(e.endX, e.endY); a.tpCool = 0.7; }
+      }
+      else if (e.type === 'FLAG' && e.config && e.config.flee && !e.fled && (e.endX !== e.startX || e.endY !== e.startY)) {
+        if (Math.hypot(a.x + a.w / 2 - (e.px + S / 2), a.y + a.h / 2 - (e.py + S / 2)) < S * 2.5) { e.fled = true; api.fx(e.px, e.py, '#22c55e'); e.px = e.endX; e.py = e.endY; api.fx(e.px, e.py, '#22c55e'); }
+      }
+    }
+    // Sensor (shared by player and bots)
+    function sensorStep(world, links, a, e, dt, sched, api) {
+      if (e.state !== 'active') return;
+      const cfg = e.config || {}, S = GRID_SIZE;
+      if (e.cool > 0) e.cool -= dt;
+      if (e.triggered && cfg.cooldown > 0 && !(e.cool > 0)) e.triggered = false;
+      if (e.triggered) return;
+      const rad = (cfg.radius || 1) * S;
+      let inside = cfg.radius === 99 || Math.hypot(a.x + a.w / 2 - (e.px + S / 2), a.y + a.h / 2 - (e.py + S / 2)) <= rad;
+      if (cfg.invert) inside = !inside;
+      if (!inside) return;
+      e.triggered = true; if (cfg.cooldown > 0) e.cool = cfg.cooldown;
+      sched(() => {
+        const act = cfg.action;
+        if (act === 'GLOBAL_GRAVITY') api.flipGravity();
+        if (act === 'MESSAGE') api.say(cfg.text || '😈');
+        if (act === 'LAUNCH') api.launch();
+        if (act === 'TELEPORT') { if (cfg.destX != null && cfg.destY != null) api.teleport(cfg.destX * S, cfg.destY * S); else api.teleport(e.px, e.py); }
+        links.filter(l => l.sensorId === e.id).forEach(l => {
+          const tg = world.find(t => t.id === l.targetId); if (!tg) return;
+          if (act === 'DEPLOY') tg.state = 'active';
+          if (act === 'BREAK') tg.state = 'collapsed';
+          if (act === 'HIDE') tg.state = 'hidden';
+          if (act === 'TOGGLE') tg.state = tg.state === 'active' ? 'hidden' : 'active';
+          if (act === 'TRANSFORM_SPIKE') tg.type = 'SPIKE';
+          if (act === 'TRANSFORM_FLAME') tg.type = 'FLAME';
+          if (act === 'TRANSFORM_SAW') tg.type = 'SAW';
+          if (act === 'TRANSFORM_SOLID') tg.type = 'SOLID';
+          if (act === 'SPAWN_ENEMY') world.push({ id: 'sp' + Math.random(), type: 'ENEMY', px: tg.px, py: tg.py, startX: tg.px, startY: tg.py, endX: tg.px, endY: tg.py, enemyVx: 60, state: 'active' });
+          if (act === 'MOVE_TARGET' && cfg.destX != null && cfg.destY != null) {
+            const nx = cfg.destX * S, ny = cfg.destY * S, dx = nx - tg.px, dy = ny - tg.py;
+            api.fx(tg.px, tg.py, '#a855f7');
+            tg.px += dx; tg.py += dy; tg.startX += dx; tg.startY += dy; tg.endX += dx; tg.endY += dy; api.fx(nx, ny, '#a855f7');
+          }
+        });
+      }, cfg.delay || 0);
+    }
+    function surfaceUnder(list, a) {
+      const gd = a.gravityDir || a.gdir || 1, px = a.x + a.w / 2, py = gd > 0 ? a.y + a.h + 3 : a.y - 3;
+      for (const e of list) {
+        if ((e.type === 'ICE' || e.type === 'CONVEYOR') && e.state !== 'hidden' && e.state !== 'collapsed' &&
+            px >= e.px && px < e.px + GRID_SIZE && py >= e.py && py < e.py + GRID_SIZE) return e.type;
+      }
+      return null;
+    }
+    const PLAN_HAZ = ['SPIKE', 'SAW', 'LAVA'];
+    function planSim(b, near, d, j, steps, flag, left) {
+      const S = GRID_SIZE, dt = 1 / 60, gd = b.gdir, r = { x: b.x, y: b.y, w: b.w, h: b.h };
+      let x = b.x, y = b.y, vy = b.vy, gr = b.grounded, jumped = false, pen = 0;
+      const hit = new Set(), got = new Set();
+      for (let f = 0; f < steps; f++) {
+        if (!jumped && j >= 0 && f >= j && gr) { vy = -380 * gd; gr = false; jumped = true; }
+        vy += 950 * gd * dt;
+        const vx = d * 180;
+        x += vx * dt; r.x = x; r.y = y;
+        for (const e of near) if (SOLID_TYPES.includes(e.type) && isColliding(r, { x: e.px, y: e.py, w: S, h: S })) { x = vx > 0 ? e.px - b.w : e.px + S; r.x = x; }
+        y += vy * dt; r.y = y; gr = false;
+        for (const e of near) if (SOLID_TYPES.includes(e.type) && isColliding(r, { x: e.px, y: e.py, w: S, h: S })) {
+          if (vy * gd > 0) { y = gd > 0 ? e.py - b.h : e.py + S; gr = true; } else y = gd > 0 ? e.py + S : e.py - b.h;
+          vy = 0; r.y = y;
+        }
+        if (y > GRID_ROWS * S + 50 || y < -100) return { score: -3000 + f, cell: '' };
+        for (const e of near) {
+          if (PLAN_HAZ.includes(e.type) || e.type === 'ENEMY') { if (isColliding(r, { x: e.px + 4, y: e.py + 4, w: S - 8, h: S - 8 })) return { score: -3000 + f, cell: '' }; }
+          else if (e.type === 'FLAME') { if (Math.floor((b.t + f * dt) * 2) % 2 === 0 && isColliding(r, { x: e.px + 4, y: e.py - 10, w: S - 8, h: S + 10 })) return { score: -3000 + f, cell: '' }; }
+          else if (e.type === 'FLAG') { if (left === 0 && isColliding(r, { x: e.px, y: e.py, w: S, h: S })) return { score: 6000 - f, cell: '' }; }
+          else if (e.type === 'COIN') { if (!got.has(e.id) && isColliding(r, { x: e.px + 4, y: e.py + 4, w: S - 8, h: S - 8 })) { got.add(e.id); pen -= 500; } }
+          else if (e.type === 'BOUNCER') { if (isColliding(r, { x: e.px, y: e.py + 12, w: S, h: S - 12 })) { vy = -620 * gd; gr = false; } }
+        }
+        if (f % 3 === 0) b.danger.forEach((dp, k) => { if (!hit.has(k) && Math.abs(x - dp.x) < 30 && Math.abs(y - dp.y) < 40) { hit.add(k); pen += 50; } });
+      }
+      const dist = Math.abs(x + b.w / 2 - (flag.px + 16)) + 0.8 * Math.abs(y - flag.py);
+      return { score: -dist + (gr ? 15 : 0) - pen, cell: Math.floor(x / S) + ',' + Math.floor(y / S) };
+    }
+    function planBot(b, flag) {
+      flag = pickGoal(b, flag); const left = coinsLeft(b.world); const R = 280;
+      if (b.lastCoins !== b.coinSet.size) { b.visit = {}; b.lastCoins = b.coinSet.size; }
+      const near = b.world.filter(e => e.state !== 'hidden' && e.state !== 'collapsed' && e.state !== 'collected' && Math.abs(e.px - b.x) < R && Math.abs(e.py - b.y) < R &&
+        (SOLID_TYPES.includes(e.type) || PLAN_HAZ.includes(e.type) || e.type === 'FLAME' || e.type === 'FLAG' || e.type === 'COIN' || e.type === 'BOUNCER' || (e.type === 'ENEMY' && e.state === 'active')));
+      const toward = flag.px + 16 > b.x ? 1 : -1, horizon = Math.round(30 + 40 * b.skill);
+      const jumps = b.grounded ? [-1, 0, 3, 6, 9, 12, 16, 20, 26] : [-1, 0];
+      let best = null, bestScore = -Infinity;
+      for (const d of [toward, -toward, 0]) for (const j of jumps) {
+        const r = planSim(b, near, d, j, horizon, flag, left);
+        const sc = r.score - Math.min(4, b.visit[r.cell] || 0) * 30 + (Math.random() - 0.5) * (1 - b.skill) * 160;
+        if (sc > bestScore) { bestScore = sc; best = { d, j }; }
+      }
+      const err = best.j >= 0 ? Math.round((Math.random() - 0.5) * 2 * (1 - b.skill) * 9) : 0, jj = best.j >= 0 ? Math.max(0, best.j + err) : -1;
+      return { dir: best.d, jumpAt: jj, left: jj >= 0 ? Math.max(4, jj + 3) : 8, f: 0, jumped: false };
+    }
+    function simWorld() {
+      return currentLevel.grid.map(o => ({
+        ...o, px: o.x * GRID_SIZE, py: o.y * GRID_SIZE, startX: o.x * GRID_SIZE, startY: o.y * GRID_SIZE,
+        endX: o.pathEnd ? o.pathEnd.x * GRID_SIZE : o.x * GRID_SIZE, endY: o.pathEnd ? o.pathEnd.y * GRID_SIZE : o.y * GRID_SIZE,
+        moveProgress: 0, moveDir: 1, state: o.hidden ? 'hidden' : 'active', triggered: false, enemyVx: 60, deltaX: 0, deltaY: 0
+      }));
+    }
+    function makeBot(i, n, so) {
+      const sx = so.x * GRID_SIZE + 5, sy = so.y * GRID_SIZE;
+      return { i, skill: 0.35 + 0.65 * (i / Math.max(1, n - 1)), danger: [], visit: {}, plan: null, coinSet: new Set(), x: sx, y: sy, spawn: { x: sx, y: sy }, cp: null,
+        vx: 0, vy: 0, w: player.w, h: player.h, grounded: false, gdir: 1, alive: true, finished: false,
+        deaths: 0, t: 0, lastX: sx, stuckT: 0, wander: 0, wdir: 1, world: simWorld(), pending: [],
+        color: `hsl(${(i * 47) % 360} 85% 62%)` };
+    }
+    function simSolidAt(b, px, py) {
+      return b.world.some(e => e.state !== 'hidden' && e.state !== 'collapsed' && SOLID_TYPES.includes(e.type) &&
+        px >= e.px && px < e.px + GRID_SIZE && py >= e.py && py < e.py + GRID_SIZE);
+    }
+    function simHazardAhead(b, dir) {
+      const x0 = dir > 0 ? b.x : b.x - b.jd, x1 = dir > 0 ? b.x + b.w + b.jd : b.x + b.w;
+      return b.world.some(e => (e.type === 'SPIKE' || e.type === 'SAW' || e.type === 'LAVA' || e.type === 'FLAME' || (e.type === 'ENEMY' && e.state === 'active')) &&
+        e.px + GRID_SIZE > x0 && e.px < x1 && Math.abs(e.py - b.y) < GRID_SIZE * 1.5);
+    }
+    function simKill(b) {
+      burst(b.x + b.w / 2, b.y + b.h / 2, b.color, 10);
+      b.deaths++; b.danger.push({ x: b.x, y: b.y }); b.plan = null;
+      if (b.deaths >= 25) { b.alive = false; return; }
+      b.x = b.cp ? b.cp.x : b.spawn.x; b.y = b.cp ? b.cp.y : b.spawn.y;
+      b.vx = 0; b.vy = 0; b.gdir = 1; b.world = simWorld(); applyCoins(b.world, b.coinSet); b.pending = [];
+    }
+    function simCollide(b, axis) {
+      for (const e of b.world) {
+        if (e.state === 'hidden' || e.state === 'collapsed') continue;
+        if (!SOLID_TYPES.includes(e.type)) continue;
+        if (!isColliding(b, { x: e.px, y: e.py, w: GRID_SIZE, h: GRID_SIZE })) continue;
+        if (e.type === 'FAKE_BLOCK') { e.state = 'collapsed'; continue; }
+        if (axis === 'x') {
+          b.x = b.vx > 0 ? e.px - b.w : e.px + GRID_SIZE; b.vx = 0;
+        } else if (b.vy * b.gdir > 0) {
+          b.y = b.gdir > 0 ? e.py - b.h : e.py + GRID_SIZE; b.vy = 0; b.grounded = true;
+          if (e.deltaX || e.deltaY) { b.x += e.deltaX || 0; b.y += e.deltaY || 0; }
+        } else if (b.vy * b.gdir < 0) {
+          b.y = b.gdir > 0 ? e.py + GRID_SIZE : e.py - b.h; b.vy = 0;
+        }
+      }
+    }
+    function makeBotApi(b) {
+      return { fx() {}, coin: e => b.coinSet.add(e.id), say() {}, flipGravity: () => { b.gdir *= -1; },
+        teleport: (x, y) => { b.x = x + 5; b.y = y; b.vx = 0; b.vy = 0; }, launch: () => { b.vy = -700 * b.gdir; b.grounded = false; } };
+    }
+    function pickGoal(b, flag) {
+      const coins = b.world.filter(e => e.type === 'COIN' && e.state !== 'collected');
+      const pool = coins.length ? coins : b.world.filter(e => e.type === 'FLAG' && e.state !== 'hidden' && e.state !== 'collapsed');
+      if (!pool.length) return flag;
+      let best = pool[0], bd = Infinity;
+      pool.forEach(e => { const d = Math.abs(e.px - b.x) + Math.abs(e.py - b.y); if (d < bd) { bd = d; best = e; } });
+      return { px: best.px, py: best.py };
+    }
+    function simStepBot(b, dt, flag) {
+      const S = GRID_SIZE;
+      if (!b.api) b.api = makeBotApi(b);
+      b.t += dt;
+      b.pending = b.pending.filter(p => { if (b.t >= p.at) { p.fn(); return false; } return true; });
+
+      // entities (same rules as the real game)
+      for (const e of b.world) {
+        if (isPathMover(e)) {
+          const ox = e.px, oy = e.py;
+          e.moveProgress += dt * (e.moveSpeed || 2) * 0.3 * e.moveDir;
+          if (e.moveProgress >= 1) { e.moveProgress = 1; e.moveDir = -1; }
+          if (e.moveProgress <= 0) { e.moveProgress = 0; e.moveDir = 1; }
+          e.px = e.startX + (e.endX - e.startX) * e.moveProgress; e.py = e.startY + (e.endY - e.startY) * e.moveProgress;
+          e.deltaX = e.px - ox; e.deltaY = e.py - oy;
+        }
+        if (e.type === 'ENEMY' && e.state === 'active') {
+          e.px += e.enemyVx * dt;
+          if (e.px > e.startX + S * 3 || e.px < e.startX - S * 3) e.enemyVx *= -1;
+        }
+        if (e.type === 'SENSOR') sensorStep(b.world, currentLevel.links || [], b, e, dt, (fn, sec) => b.pending.push({ at: b.t + sec, fn }), b.api);
+        mechanicsStep(b.world, b, e, dt, b.api);
+      }
+
+      applyGlue(b.world);
+      if (b._kill) { b._kill = false; simKill(b); return; }
+
+      // controller: lookahead planner (simulates its own jumps with the real physics, remembers where it died)
+      b.stuckT += dt;
+      if (b.stuckT > 1.5) { if (Math.abs(b.x - b.lastX) < 12 && b.grounded) { b.wander = 0.4 + Math.random() * 0.6; b.wdir = Math.random() < 0.5 ? -1 : 1; b.plan = null; } b.lastX = b.x; b.stuckT = 0; }
+      if (!b.plan || b.plan.left <= 0) {
+        const cell = Math.floor(b.x / GRID_SIZE) + ',' + Math.floor(b.y / GRID_SIZE);
+        b.visit[cell] = (b.visit[cell] || 0) + 1;
+        b.plan = planBot(b, flag);
+      }
+      const pl = b.plan; pl.left--; pl.f++;
+      let dir = pl.dir;
+      if (b.wander > 0) { b.wander -= dt; dir = b.wdir; if (b.grounded && Math.random() < 0.05) { pl.jumpAt = pl.f; pl.jumped = false; } }
+      b.vx = dir * 180;
+      const surf = surfaceUnder(b.world, b);
+      if (surf === 'ICE' && b.grounded) { b.slide = (b.slide || 0) + (b.vx - (b.slide || 0)) * Math.min(1, dt * 2.5); b.vx = b.slide; } else b.slide = b.vx;
+      if (surf === 'CONVEYOR' && b.grounded) b.vx += 90;
+      if (b.grounded && Math.random() < (1 - b.skill) * 0.004) pl.jumped = true;
+      if (b.grounded && !pl.jumped && pl.jumpAt >= 0 && pl.f >= pl.jumpAt) { b.vy = -380 * b.gdir; b.grounded = false; pl.jumped = true; }
+
+      // physics (identical constants to the player)
+      b.vy += 950 * b.gdir * dt;
+      b.x += b.vx * dt; simCollide(b, 'x');
+      b.y += b.vy * dt; b.grounded = false; simCollide(b, 'y');
+      if (b.y > GRID_ROWS * S + 50 || b.y < -100) { simKill(b); return; }
+
+      // hazards, bouncers, checkpoints, flag
+      for (const e of b.world) {
+        if (e.type === 'SPIKE' || e.type === 'SAW' || e.type === 'LAVA' || (e.type === 'ENEMY' && e.state === 'active')) {
+          if (isColliding(b, { x: e.px + 4, y: e.py + 4, w: S - 8, h: S - 8 })) { simKill(b); return; }
+        } else if (e.type === 'FLAME') {
+          if (Math.floor(b.t * 2) % 2 === 0 && isColliding(b, { x: e.px + 4, y: e.py - 10, w: S - 8, h: S + 10 })) { simKill(b); return; }
+        } else if (e.type === 'BOUNCER' && e.state !== 'hidden') {
+          if (isColliding(b, { x: e.px, y: e.py + 12, w: S, h: S - 12 })) { b.vy = -620 * b.gdir; b.grounded = false; }
+        } else if (e.type === 'CHECKPOINT' && !e.activated) {
+          if (isColliding(b, { x: e.px, y: e.py, w: S, h: S })) { e.activated = true; b.cp = { x: e.px, y: e.py }; }
+        } else if (e.type === 'FLAG') {
+          if (e.state !== 'hidden' && e.state !== 'collapsed' && coinsLeft(b.world) === 0 && isColliding(b, { x: e.px, y: e.py, w: S, h: S })) { b.finished = true; return; }
+        }
+      }
+    }
+
+    let simStats = { ok: 0, total: 0, deaths: 0 };
+    function runBotSimulationWave(waveNumber, botCount) {
+      const cv = document.getElementById('simCanvas'), c = cv.getContext('2d');
+      document.getElementById('botWaveBadge').innerText = `${simPack ? 'Niveau ' + (simPack.i + 1) + '/' + simPack.levels.length + ' · ' : ''}Vague ${waveNumber}/2 (${botCount} Bots)`;
+      document.getElementById('botProgressText').innerText = `Les bots jouent ton niveau en direct (mêmes règles que le joueur)...`;
+      const so = currentLevel.grid.find(o => o.type === 'PLAYER') || { x: 2, y: 11 };
+      const fo = currentLevel.grid.find(o => o.type === 'FLAG') || { x: 22, y: 11 };
+      const flag = { px: fo.x * GRID_SIZE, py: fo.y * GRID_SIZE };
+      const bots = Array.from({ length: botCount }, (_, i) => makeBot(i, botCount, so));
+      currentSimBots = bots;
+      if (botSimLoopId) cancelAnimationFrame(botSimLoopId);
+      let frame = 0;
+
+      function simStep() {
+        for (let k = 0; k < 6; k++) bots.forEach(b => { if (b.alive && !b.finished) simStepBot(b, 1 / 60, flag); });
+        updateParticles(0.1);
+        frame++;
+        c.setTransform(cv.width / canvas.width, 0, 0, cv.height / canvas.height, 0, 0);
+        drawBackground(c, canvas.width, canvas.height);
+        const lead = bots.find(b => b.alive && !b.finished) || bots[0];
+        lead.world.forEach(e => {
+          if (e.state === 'hidden' || e.state === 'collected' || e.ghost || (e.type === 'SENSOR' && !(e.config && e.config.invisible === false))) return;
+          drawTile(c, e, e.px, e.py, false);
+        });
+        bots.forEach(b => { if (b.alive && !b.finished) drawHero(c, b, b.color, 0.8); });
+        drawParticles(c);
+        c.setTransform(1, 0, 0, 1, 0, 0);
+
+        const ok = bots.filter(b => b.finished).length, active = bots.filter(b => b.alive && !b.finished).length;
+        const deaths = bots.reduce((s, b) => s + b.deaths, 0);
+        document.getElementById('botSuccessRate').innerText = `Réussite: ${ok} / ${botCount} · ${deaths} morts`;
+        if (active > 0 && frame < 900) botSimLoopId = requestAnimationFrame(simStep);
+        else if (waveNumber === 1 && ok <= 2) runBotSimulationWave(2, 30);
+        else finalizeBotSimulation(ok, botCount, deaths);
+      }
+      simStep();
+    }
+
+    function finalizeBotSimulation(successes, total, deaths) {
+      if (simPack) {
+        simPack.ratios.push(successes / total); simPack.deaths += deaths; simPack.i++;
+        if (simPack.i < simPack.levels.length) { currentLevel = simPack.levels[simPack.i]; runBotSimulationWave(1, 12); return; }
+        currentLevel = simPack.backup;
+        successes = Math.round(simPack.ratios.reduce((a, b) => a * b, 1) * 30); total = 30; deaths = simPack.deaths; simPack = null;
+      }
+      const ratio = successes / total;
+      const badge = document.getElementById('botResultBadge');
+      badge.classList.remove('hidden');
+      document.getElementById('btnConfirmPublish').classList.remove('hidden');
+      const tiers = [
+        [0, 'Diabolique', 'red'], [0.15, 'Extrême', 'orange'], [0.4, 'Difficile', 'amber'], [0.7, 'Moyen', 'yellow'], [1.01, 'Facile', 'emerald']
+      ];
+      let tier;
+      if (successes === 0) tier = tiers[0];
+      else if (ratio <= 0.15) tier = tiers[1];
+      else if (ratio <= 0.4) tier = tiers[2];
+      else if (ratio <= 0.7) tier = tiers[3];
+      else tier = tiers[4];
+      badge.className = `p-2 rounded-xl font-bold border text-xs bg-${tier[2]}-950/80 border-${tier[2]}-600 text-${tier[2]}-300`;
+      badge.innerText = `${tier[1]} (${successes}/${total} bots · ${deaths} morts)`;
+      evaluatedDifficulty = tier[1];
+      simStats = { ok: successes, total, deaths };
+    }
+
+    function saveCatalog() { try { localStorage.setItem('devil_community_catalog', JSON.stringify(communityCatalog.filter(l => !l.remote))); } catch (e) {} }
+    function confirmFinalPublish() {
+      const srcId = pubPack ? pubPack.id : currentLevel.id;
+      const old = communityCatalog.findIndex(l => l.srcId === srcId);
+      const base = pubPack ? { kind: 'pack', title: currentLevel.title, author: currentLevel.author, theme: pubPack.theme, grid: [], levels: JSON.parse(JSON.stringify(pubPack.levels)) } : { ...currentLevel };
+      const entry = { ...base, id: old >= 0 ? communityCatalog[old].id : 'pub_' + Date.now(), srcId, difficulty: evaluatedDifficulty, botStats: simStats, date: '2026' };
+      if (old >= 0) communityCatalog[old] = entry; else communityCatalog.push(entry);
+      saveCatalog(); pubPack = null; pushShared(entry);
+      closeModal('modalBotSim');
+      showToast(old >= 0 ? "Mis à jour !" : "Publié !", "emerald");
+      switchMode('mine');
+    }
+    function exportCatalog() {
+      const data = JSON.stringify(communityCatalog.map(({ remote, ...l }) => l));
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' })); a.download = 'levels.json'; a.click();
+      showToast('levels.json téléchargé : mets-le à côté de index.html sur GitHub', 'emerald');
+    }
+    function importCatalog(inp) {
+      const f = inp.files[0]; if (!f) return;
+      f.text().then(t => {
+        const arr = JSON.parse(t); let n = 0;
+        arr.forEach(l => { if (l && l.id && !communityCatalog.some(c => c.id === l.id)) { communityCatalog.push(l); n++; } });
+        saveCatalog(); renderCommunityCatalog(); showToast(n + ' niveau(x) importé(s)', 'emerald');
+      }).catch(() => showToast('Fichier invalide', 'amber'));
+      inp.value = '';
+    }
+    function renderCommunityCatalog() {
+      const gridUI = document.getElementById('communityGrid');
+      const search = (document.getElementById('inputSearchLevel').value || '').toLowerCase();
+      gridUI.innerHTML = '';
+
+      const filtered = communityCatalog.filter(l => (l.title || '').toLowerCase().includes(search) || (l.author || '').toLowerCase().includes(search));
+
+      if (filtered.length === 0) {
+        gridUI.innerHTML = `<p class="text-xs text-slate-500 italic col-span-3">Aucun niveau disponible dans le catalogue.</p>`;
+        return;
+      }
+
+      filtered.forEach(lvl => {
+        const card = document.createElement('div');
+        card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-lg hover:border-slate-700 transition";
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 bg-amber-400/10 border border-amber-400/30 px-2 py-0.5 rounded-full">${lvl.difficulty || 'Moyen'}</span>
+              <span class="text-[11px] text-slate-500 font-semibold">${lvl.date || '2026'}</span>
+            </div>
+            <h4 class="font-bold text-slate-100 text-sm">${lvl.kind === 'pack' ? '📚 ' : ''}${starsOf(lvl)}${lvl.nextId && lvl.kind !== 'pack' ? '🔗 ' : ''}${lvl.title}</h4>
+            <p class="text-[11px] text-slate-400">Par <span class="text-indigo-400 font-semibold">${lvl.author}</span>${lvl.kind === 'pack' ? ' · ' + lvl.levels.length + ' niveaux' : ''}</p>
+          </div>
+          <button onclick="playCommunityLevel('${lvl.id}')" class="w-full py-2 bg-gradient-to-r from-red-600 to-amber-600 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 shadow-md">
+            <i class="fa-solid fa-play"></i> Jouer
+          </button>
+        `;
+        gridUI.appendChild(card);
+      });
+    }
+
+    function playCommunityLevel(id) {
+      const target = communityCatalog.find(l => l.id === id);
+      if (target && target.kind === 'pack') { startPack(target, false); return; }
+      if (target) {
+        currentPack = null;
+        currentLevel = JSON.parse(JSON.stringify(target));
+        switchMode('play');
+      }
+    }
+
+    // ===== SHARED ONLINE CATALOG (optional) =====
+    // Colle ici l'URL de ta Firebase Realtime Database, ex : 'https://mon-jeu-default-rtdb.europe-west1.firebasedatabase.app'
+    const SHARED_DB_URL = '';
+    function dbUrl() { return (SHARED_DB_URL || localStorage.getItem('devil_db_url') || '').replace(/\/$/, ''); }
+    function normLevel(l) {
+      if (!l) return l;
+      l.grid = Array.isArray(l.grid) ? l.grid : Object.values(l.grid || {});
+      l.links = Array.isArray(l.links) ? l.links : Object.values(l.links || {});
+      if (l.levels) l.levels = (Array.isArray(l.levels) ? l.levels : Object.values(l.levels)).map(normLevel);
+      return l;
+    }
+    // --- Supabase (table "levels" : id text, data jsonb) ---
+    const SUPABASE_URL = 'https://woxlpxrvvduvesbfhqpe.supabase.co';   // ex : 'https://abcdxyz.supabase.co'
+    const SUPABASE_KEY = 'sb_publishable_8jPstanQUGUpgTxrdO2JYQ_brmCN3rT';   // clé publique : "Publishable key" (sb_publishable_...) ou ancienne clé "anon". JAMAIS la clé secrète / service_role
+    function sbCfg() {
+      return { url: (SUPABASE_URL || localStorage.getItem('devil_sb_url') || '').trim().replace(/\/rest\/v1\/?$/, '').replace(/\/$/, ''), key: SUPABASE_KEY || localStorage.getItem('devil_sb_key') || '' };
+    }
+    function mergeRemote(arr) {
+      let n = 0;
+      arr.forEach(l => { if (l && l.id && !communityCatalog.some(c => c.id === l.id)) { communityCatalog.push({ ...normLevel(l), remote: true }); n++; } });
+      if (n && currentMode === 'community') renderCommunityCatalog();
+    }
+    function loadShared() {
+      const sb = sbCfg();
+      if (sb.url && sb.key) {
+        fetch(sb.url + '/rest/v1/levels?select=data&order=created_at.desc&limit=500', { headers: { apikey: sb.key }, cache: 'no-store' })
+          .then(r => r.ok ? r.json() : []).then(rows => mergeRemote(Array.isArray(rows) ? rows.map(r => r.data) : [])).catch(() => {});
+        return;
+      }
+      const u = dbUrl(); if (!u) return;
+      fetch(u + '/levels.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(obj => { if (obj) mergeRemote(Object.values(obj)); }).catch(() => {});
+    }
+    function pushShared(entry) {
+      const sb = sbCfg(), ok = r => { showToast(r.ok ? '🌍 Visible par tous les joueurs !' : '⚠️ Serveur partagé : envoi refusé (niveau gardé chez toi)', r.ok ? 'emerald' : 'amber'); if (!r.ok) r.text().then(t => alert('Publication refusée (' + r.status + ') : ' + t.slice(0, 250))); };
+      const fail = () => showToast('⚠️ Serveur partagé injoignable (niveau gardé chez toi)', 'amber');
+      if (sb.url && sb.key) {
+        fetch(sb.url + '/rest/v1/levels?on_conflict=id', { method: 'POST', headers: { apikey: sb.key, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify({ id: entry.id, data: entry }) }).then(ok).catch(fail);
+        return;
+      }
+      const u = dbUrl(); if (!u) return;
+      fetch(u + '/levels/' + entry.id + '.json', { method: 'PUT', body: JSON.stringify(entry) }).then(ok).catch(fail);
+    }
+    function testShared() {
+      const sb = sbCfg();
+      if (!(sb.url && sb.key)) { alert('Aucun serveur Supabase configuré dans le jeu.'); return; }
+      fetch(sb.url + '/rest/v1/levels?select=id', { headers: { apikey: sb.key }, cache: 'no-store' })
+        .then(r => r.text().then(t => {
+          if (r.ok) { let n = 0; try { n = JSON.parse(t).length; } catch (e) {} alert('✅ Serveur OK : ' + n + ' niveau(x) en ligne.\nAdresse : ' + sb.url); }
+          else alert('❌ Erreur ' + r.status + ' : ' + t.slice(0, 250) + '\nAdresse : ' + sb.url);
+        })).catch(e => alert('❌ Serveur injoignable : ' + e.message + '\nAdresse : ' + sb.url));
+    }
+    function uploadLocalCatalog() {
+      const sb = sbCfg();
+      if (!(sb.url && sb.key)) { alert('Serveur Supabase non configuré dans le jeu.'); return; }
+      const mine = communityCatalog.filter(l => !l.remote);
+      if (!mine.length) { alert('Aucun niveau local à envoyer.'); return; }
+      fetch(sb.url + '/rest/v1/levels?on_conflict=id', { method: 'POST', headers: { apikey: sb.key, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify(mine.map(l => ({ id: l.id, data: l }))) })
+        .then(r => r.ok ? alert('✅ ' + mine.length + ' niveau(x) envoyé(s) : tout le monde peut les voir.') : r.text().then(t => alert('❌ Refusé (' + r.status + ') : ' + t.slice(0, 250))))
+        .catch(e => alert('❌ Serveur injoignable : ' + e.message));
+    }
+    function setDbUrl() {
+      const url = prompt('Colle l\'adresse de ton projet Supabase (https://xxxx.supabase.co) ou de ta base Firebase :', sbCfg().url || localStorage.getItem('devil_db_url') || '');
+      if (url === null) return;
+      if (/firebase/i.test(url)) { try { localStorage.setItem('devil_db_url', url.trim()); } catch (e) {} loadShared(); showToast('Serveur Firebase enregistré', 'emerald'); return; }
+      const key = prompt('Colle la clé publique (Publishable key / anon) — pas la clé secrète :', sbCfg().key || '');
+      if (key === null) return;
+      try { localStorage.setItem('devil_sb_url', url.trim()); localStorage.setItem('devil_sb_key', key.trim()); } catch (e) {}
+      loadShared(); showToast('Serveur Supabase enregistré', 'emerald');
+    }
+    function starsOf(l) {
+      if (l.kind === 'pack') { const n = l.levels.filter(x => isDone(l.id + ':' + x.id)).length; return n ? `⭐ ${n}/${l.levels.length} ` : ''; }
+      return isDone(l.id) ? '⭐ ' : '';
+    }
+    function loadCommunityCatalog() {
+      try {
+        const stored = localStorage.getItem('devil_community_catalog');
+        if (stored) communityCatalog = JSON.parse(stored);
+      } catch (e) { console.error(e); }
+      fetch('levels.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : []).then(arr => {
+        if (!Array.isArray(arr)) return; let n = 0;
+        arr.forEach(l => { if (l && l.id && !communityCatalog.some(c => c.id === l.id)) { communityCatalog.push({ ...normLevel(l), remote: true }); n++; } });
+        if (n && currentMode === 'community') renderCommunityCatalog();
+      }).catch(() => {});
+      loadShared();
+    }
+
+    function bindTouchEvents() {
+      const bind = (id, key) => {
+        const btn = document.getElementById(id);
+        const start = (e) => { e.preventDefault(); touchState[key] = true; };
+        const end = (e) => { e.preventDefault(); touchState[key] = false; };
+        btn.addEventListener('touchstart', start);
+        btn.addEventListener('touchend', end);
+        btn.addEventListener('mousedown', start);
+        btn.addEventListener('mouseup', end);
+      };
+      bind('btnLeft', 'left');
+      bind('btnRight', 'right');
+      bind('btnJump', 'jump');
+    }
+
+    function clearCurrentLevel() {
+      currentLevel.grid = []; currentLevel.links = []; creatorHasFinished = false;
+      showToast("Grille effacée", "amber");
+    }
+
+    function getMine() { try { return JSON.parse(localStorage.getItem('devil_my_levels')) || []; } catch (e) { return []; } }
+    function setMine(arr) { try { localStorage.setItem('devil_my_levels', JSON.stringify(arr)); } catch (e) {} }
+    function saveMine(silent) {
+      const arr = getMine(), lvl = JSON.parse(JSON.stringify(currentLevel));
+      lvl.cleared = !!creatorHasFinished; lvl.savedAt = Date.now();
+      const i = arr.findIndex(l => l.id === lvl.id);
+      if (i >= 0) arr[i] = lvl; else arr.unshift(lvl);
+      setMine(arr); rebuildPacks();
+      if (!silent) showToast('📁 Enregistré dans « Mes niveaux »', 'emerald');
+    }
+    function migrateOldSave() {
+      try {
+        const raw = localStorage.getItem('devil_saved_level');
+        if (!raw || localStorage.getItem('devil_migrated')) return;
+        let l = JSON.parse(raw); if (Array.isArray(l)) l = { grid: l };
+        if (l && Array.isArray(l.grid)) {
+          l.id = l.id || 'level_' + Date.now(); l.title = l.title || 'Ancien niveau'; l.links = l.links || []; l.theme = l.theme || 'neon'; l.savedAt = Date.now();
+          const arr = getMine(); if (!arr.some(x => x.id === l.id)) { arr.unshift(l); setMine(arr); }
+        }
+        localStorage.setItem('devil_migrated', '1');
+      } catch (e) {}
+    }
+    function saveToLocalSlot() { saveMine(false); }
+    function newMineLevel() {
+      currentLevel = { id: 'level_' + Date.now(), title: 'Nouveau niveau', theme: 'neon', links: [],
+        grid: [{ id: 'p1', type: 'PLAYER', x: 2, y: 11 }, { id: 'f1', type: 'FLAG', x: 22, y: 11 },
+               ...Array.from({ length: 25 }, (_, x) => ({ id: 'g' + x, type: 'SOLID', x, y: 12 }))] };
+      currentPack = null; pubPack = null; creatorHasFinished = false; switchMode('edit');
+    }
+    function rebuildPacks() {
+      let arr = getMine();
+      const lv = arr.filter(l => l.kind !== 'pack'), byId = Object.fromEntries(lv.map(l => [l.id, l]));
+      const pointed = new Set(lv.filter(l => byId[l.nextId]).map(l => l.nextId)), packs = [];
+      lv.filter(l => byId[l.nextId] && !pointed.has(l.id)).forEach(head => {
+        const chain = [], seen = new Set(); let c = head;
+        while (c && !seen.has(c.id)) { chain.push(c); seen.add(c.id); c = byId[c.nextId]; }
+        if (chain.length < 2) return;
+        const id = 'pack_' + head.id, old = arr.find(p => p.id === id);
+        packs.push({ id, kind: 'pack', customTitle: !!(old && old.customTitle), title: old && old.customTitle ? old.title : '🔗 ' + chain.map(c => c.title).join(' → '),
+          theme: head.theme, grid: [], levelIds: chain.map(c => c.id), levels: chain.map(c => JSON.parse(JSON.stringify(c))), cleared: chain.every(c => c.cleared), savedAt: Date.now() });
+      });
+      setMine([...lv, ...packs]);
+    }
+    function getPackProgress() { try { return JSON.parse(localStorage.getItem('devil_pack_progress')) || {}; } catch (e) { return {}; } }
+    function savePackProgress(id, idx) { const pr = getPackProgress(); pr[id] = idx; try { localStorage.setItem('devil_pack_progress', JSON.stringify(pr)); } catch (e) {} }
+    function startPack(pk, fromStart) {
+      let idx = fromStart ? 0 : (getPackProgress()[pk.id] || 0); if (idx >= pk.levels.length) idx = 0;
+      currentPack = { id: pk.id, title: pk.title, levels: pk.levels, idx }; loadPackLevel();
+    }
+    function loadPackLevel() {
+      currentLevel = JSON.parse(JSON.stringify(currentPack.levels[currentPack.idx])); currentLevel.packId = currentPack.id; switchMode('play');
+      showToast(`📚 Niveau ${currentPack.idx + 1}/${currentPack.levels.length} : ${currentLevel.title}`, 'emerald');
+    }
+    function playPackMine(id, fromStart) { const pk = findMine(id); if (pk) startPack(pk, fromStart); }
+    function unlinkPack(id) {
+      const pk = findMine(id); if (!pk) return;
+      const arr = getMine(); arr.forEach(l => { if (pk.levelIds.includes(l.id)) l.nextId = null; }); setMine(arr); rebuildPacks(); renderMine();
+      showToast('Série déliée (tes niveaux sont conservés)', 'amber');
+    }
+    function publishPack(id) {
+      const pk = findMine(id); if (!pk) return;
+      if (!pk.cleared) { showToast('Réussis chaque niveau en Mode Test avant de publier la série', 'amber'); return; }
+      pubPack = pk; currentPack = null;
+      currentLevel = { id: pk.id, title: pk.title, theme: pk.theme, grid: [], links: [], nextId: null }; creatorHasFinished = true;
+      openPublishModal();
+    }
+    function findMine(id) { return getMine().find(l => l.id === id); }
+    function findAny(id) { return id ? (communityCatalog.find(l => l.id === id || l.srcId === id) || findMine(id)) : null; }
+    function editMine(id) { const l = findMine(id); if (!l || l.kind === 'pack') return; currentPack = null; pubPack = null; currentLevel = JSON.parse(JSON.stringify(l)); creatorHasFinished = !!l.cleared; switchMode('edit'); }
+    function playAny(id) { const l = findAny(id); if (!l) return; if (l.kind === 'pack') { startPack(l, false); return; } currentPack = null; currentLevel = JSON.parse(JSON.stringify(l)); switchMode('play'); }
+    function publishMine(id) { editMine(id); pubPack = null; openPublishModal(); }
+    function renameMine(id) {
+      const arr = getMine(), l = arr.find(x => x.id === id); if (!l) return;
+      const t = prompt('Nouveau nom du niveau :', l.title); if (!t || !t.trim()) return;
+      l.title = t.trim(); if (l.kind === 'pack') l.customTitle = true; setMine(arr); renderMine();
+    }
+    function deleteMine(id) {
+      if (!confirm('Supprimer ce niveau définitivement ?')) return;
+      setMine(getMine().filter(l => l.id !== id)); rebuildPacks(); renderMine(); showToast('Niveau supprimé', 'amber');
+    }
+    function setNextMine(id, nextId) {
+      const arr = getMine(), l = arr.find(x => x.id === id); if (!l) return;
+      l.nextId = nextId || null; setMine(arr); rebuildPacks();
+      const pub = communityCatalog.find(c => c.srcId === id);
+      if (pub) { pub.nextId = l.nextId; saveCatalog(); }
+      renderMine(); showToast(nextId ? '🔗 Suite reliée' : 'Suite retirée', 'emerald');
+    }
+    function renderMine() {
+      const grid = document.getElementById('mineGrid'), all = getMine(), arr = all.filter(l => l.kind !== 'pack'), packs = all.filter(l => l.kind === 'pack');
+      if (!all.length) { grid.innerHTML = '<p class="text-xs text-slate-500 italic col-span-3">Aucun niveau enregistré. Crée-en un dans l\'éditeur et clique sur « Enregistrer ».</p>'; return; }
+      const icons = { neon: '🌌', nature: '🌿', glace: '❄️', enfer: '🔥', desert: '🏜️', ville: '🏙️' }, btn = 'px-2 py-1.5 rounded-lg text-[11px] font-bold transition ';
+      const levelCards = arr.map(l => {
+        const pub = communityCatalog.find(c => c.srcId === l.id);
+        const opts = '<option value="">Aucune suite</option>' + arr.filter(o => o.id !== l.id).map(o => `<option value="${o.id}" ${l.nextId === o.id ? 'selected' : ''}>→ ${o.title}</option>`).join('');
+        return `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-3 shadow-lg">
+          <div><div class="flex gap-1.5 flex-wrap mb-1.5 text-[10px] font-bold">
+            <span class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">${icons[l.theme] || '🌌'} ${l.theme || 'neon'}</span>
+            <span class="px-2 py-0.5 rounded-full ${l.cleared ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}">${l.cleared ? '✔ Testé' : '✖ Non testé'}</span>
+            ${pub ? `<span class="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300">🌍 Publié · ${pub.difficulty}</span>` : ''}</div>
+            <h4 class="font-bold text-slate-100 text-sm">${starsOf(l)}${l.title}</h4>
+            <p class="text-[11px] text-slate-500">${l.grid.length} objets · ${new Date(l.savedAt || Date.now()).toLocaleDateString()}</p></div>
+          <select onchange="setNextMine('${l.id}', this.value)" class="bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-[11px] text-slate-200">${opts}</select>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button onclick="editMine('${l.id}')" class="${btn}bg-indigo-600 hover:bg-indigo-500">✏️ Modifier</button>
+            <button onclick="playAny('${l.id}')" class="${btn}bg-emerald-600 hover:bg-emerald-500">▶ Jouer</button>
+            <button onclick="publishMine('${l.id}')" class="${btn}bg-amber-600 hover:bg-amber-500">🌍 ${pub ? 'MAJ' : 'Publier'}</button>
+            <button onclick="renameMine('${l.id}')" class="${btn}bg-slate-800 hover:bg-slate-700 col-span-2">🏷️ Renommer</button>
+            <button onclick="deleteMine('${l.id}')" class="${btn}bg-red-950 hover:bg-red-900 text-red-300">🗑️</button>
+          </div></div>`;
+      }).join('');
+      const packCards = packs.map(pk => {
+        const pub = communityCatalog.find(c => c.srcId === pk.id), pr = getPackProgress()[pk.id] || 0;
+        return `<div class="bg-slate-900 border border-fuchsia-500/40 rounded-2xl p-4 flex flex-col gap-3 shadow-lg">
+          <div><div class="flex gap-1.5 flex-wrap mb-1.5 text-[10px] font-bold">
+            <span class="px-2 py-0.5 rounded-full bg-fuchsia-500/20 text-fuchsia-300">📚 Série fusionnée · ${pk.levels.length} niveaux</span>
+            <span class="px-2 py-0.5 rounded-full ${pk.cleared ? 'bg-emerald-500/15 text-emerald-300' : 'bg-red-500/15 text-red-300'}">${pk.cleared ? '✔ Tout testé' : '✖ Niveaux à tester'}</span>
+            ${pub ? `<span class="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300">🌍 Publié · ${pub.difficulty}</span>` : ''}</div>
+            <h4 class="font-bold text-slate-100 text-sm">${starsOf(pk)}${pk.title}</h4>
+            <p class="text-[11px] text-slate-500">Ce sont des copies : tes niveaux de base restent intacts · progression ${pr}/${pk.levels.length}</p></div>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button onclick="playPackMine('${pk.id}', false)" class="${btn}bg-emerald-600 hover:bg-emerald-500">▶ ${pr ? 'Reprendre' : 'Jouer'}</button>
+            <button onclick="playPackMine('${pk.id}', true)" class="${btn}bg-slate-800 hover:bg-slate-700">🔁 Début</button>
+            <button onclick="publishPack('${pk.id}')" class="${btn}bg-amber-600 hover:bg-amber-500">🌍 ${pub ? 'MAJ' : 'Publier'}</button>
+            <button onclick="renameMine('${pk.id}')" class="${btn}bg-slate-800 hover:bg-slate-700 col-span-2">🏷️ Renommer</button>
+            <button onclick="unlinkPack('${pk.id}')" class="${btn}bg-red-950 hover:bg-red-900 text-red-300">✂️ Délier</button>
+          </div></div>`;
+      }).join('');
+      grid.innerHTML = packCards + levelCards;
+    }
+
+    function openImportExportModal() {
+      document.getElementById('levelCodeTextarea').value = btoa(unescape(encodeURIComponent(JSON.stringify(currentLevel))));
+      document.getElementById('modalCode').classList.remove('hidden');
+    }
+
+    function copyLevelCodeToClipboard() {
+      const area = document.getElementById('levelCodeTextarea');
+      area.select(); document.execCommand('copy');
+      showToast("Code copié !", "emerald");
+    }
+
+    function importLevelCodeFromInput() {
+      const code = document.getElementById('levelCodeTextarea').value.trim();
+      if (!code) return;
+      try {
+        const imported = JSON.parse(decodeURIComponent(escape(atob(code))));
+        if (imported && imported.grid) {
+          currentLevel = imported; closeModal('modalCode'); resetCurrentPlaySession();
+          showToast("Niveau importé !", "emerald");
+        }
+      } catch (e) { showToast("Code invalide !", "red"); }
+    }
+
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    function showToast(msg, color = 'emerald') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `bg-slate-900 border border-${color}-500/50 text-${color}-300 px-4 py-2 rounded-xl text-xs font-bold shadow-xl flex items-center gap-2 animate-bounce`;
+      toast.innerHTML = `<span>${msg}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    }
+  </script>
+</body>
+</html>
